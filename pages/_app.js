@@ -5,6 +5,7 @@ import { CircularProgress, Box, Typography } from '@mui/material';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import AuthPages from '../components/AuthPages';
 import Home from '../pages/index';
+import '../styles/globals.css'
 
 const theme = createTheme({
   palette: {
