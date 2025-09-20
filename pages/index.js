@@ -4,7 +4,7 @@ import {
   Container, Typography, Alert, CircularProgress, Box,
   TextField, MenuItem, Paper, Chip, AppBar, Toolbar, Button, Avatar
 } from '@mui/material';
-import { Dashboard, FilterList, Logout, Person } from '@mui/icons-material';
+import { Dashboard, FilterList, Logout, Person, CalendarToday } from '@mui/icons-material'; // Added CalendarToday
 import { useAuth } from '../contexts/AuthContext';
 import TaskForm from '../components/TaskForm';
 import TaskTable from '../components/TaskTable';
@@ -16,6 +16,7 @@ import {
   getAccessibleTeams,
   applyTaskFilters
 } from '../lib/firebase';
+import WeeklyReport from '../components/WeeklyReport';
 
 export default function Home() {
   const { userProfile, logout } = useAuth();
@@ -27,6 +28,7 @@ export default function Home() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [accessibleTeams, setAccessibleTeams] = useState([]);
   const [activeFilters, setActiveFilters] = useState({});
+  const [weeklyReportOpen, setWeeklyReportOpen] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
@@ -331,6 +333,28 @@ export default function Home() {
             )}
             <Button
               color="inherit"
+              startIcon={<CalendarToday />}
+              onClick={() => setWeeklyReportOpen(true)}
+              sx={{
+                ml: 1,
+                fontWeight: 600,
+                borderRadius: 2,
+                px: 2,
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Weekly Report
+            </Button>
+            <Button
+              color="inherit"
               startIcon={<Logout />}
               onClick={handleLogout}
               sx={{
@@ -418,7 +442,7 @@ export default function Home() {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}>
-                  Welcome, {userProfile?.empName}
+                  Welcome, {userProfile?.name} {/* Changed from empName to name */}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                   {userProfile?.role === 'tech-lead'
@@ -440,17 +464,6 @@ export default function Home() {
                   boxShadow: '0 2px 8px rgba(25, 118, 210, 0.15)'
                 }}
               />
-              {/* <Chip
-                label={userProfile?.email}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderColor: '#1976d2',
-                  color: '#1976d2',
-                  fontWeight: 500,
-                  boxShadow: '0 2px 8px rgba(25, 118, 210, 0.15)'
-                }}
-              /> */}
             </Box>
           </Box>
         </Paper>
@@ -670,6 +683,13 @@ export default function Home() {
             </Typography>
           </Paper>
         )}
+
+        {/* Weekly Report Dialog */}
+        <WeeklyReport
+          open={weeklyReportOpen}
+          onClose={() => setWeeklyReportOpen(false)}
+          userProfile={userProfile}
+        />
       </Container>
     </Box>
   );

@@ -16,6 +16,7 @@ import {
     addTeamProject,
     initializeTeamDefaults,
     addTask,
+    updateTask,
     getTeamEmployees,
     addTeamEmployee,
     getTeamClients,
@@ -368,6 +369,7 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         }
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) return;
@@ -376,17 +378,32 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             if (!formData.teamName?.trim()) {
                 throw new Error('Team name is required');
             }
-
             await initializeTeamDefaults(formData.teamName);
-
-            // Save task with user context
-            await addTask({
-                ...formData,
-                teamName: formData.teamName,
-                empId: formData.empId,
-                empName: formData.empName,
-                date: formData.date
-            }, userProfile);
+            if (editTask) {
+                // UPDATE EXISTING TASK
+                await updateTask(
+                    editTask.teamName,
+                    editTask.date,
+                    editTask.empId,
+                    editTask.id,
+                    {
+                        ...formData,
+                        teamName: editTask.teamName, // Preserve original team
+                        empId: editTask.empId,       // Preserve original employee
+                        date: editTask.date          // Preserve original date
+                    },
+                    userProfile
+                );
+            } else {
+                // CREATE NEW TASK
+                await addTask({
+                    ...formData,
+                    teamName: formData.teamName,
+                    empId: formData.empId,
+                    empName: formData.empName,
+                    date: formData.date
+                }, userProfile);
+            }
 
             // Refresh dropdowns immediately after saving
             await refreshTeamData(formData.teamName);
@@ -408,10 +425,9 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                     setProjects([]);
                     setEmployees([]);
                     setClients([]);
-                } else {
-                    // Keep existing team data loaded for better UX
-                    // dropdownOptions, projects, employees, clients remain as they were
                 }
+            } else {
+                onCancel();
             }
         } catch (error) {
             console.error('Error saving task:', error);
