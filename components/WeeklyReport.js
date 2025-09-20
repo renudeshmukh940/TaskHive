@@ -24,6 +24,7 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState('');
 
+
     const calculateEndDate = (startDate) => {
         const date = new Date(startDate);
         date.setDate(date.getDate() + 6);
@@ -123,8 +124,10 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
         setLoading(true);
         setError('');
         try {
-            const endDate = calculateEndDate(weekStart);
-            const weeklyTasks = await getWeeklyTasks(userProfile, weekStart, endDate);
+            const startDate = weekStart; // Use the weekStart state
+            const endDate = calculateEndDate(weekStart); // Calculate end date
+
+            const weeklyTasks = await getWeeklyTasks(userProfile, startDate, endDate, true);
             setTasks(weeklyTasks);
 
             if (weeklyTasks.length === 0) {

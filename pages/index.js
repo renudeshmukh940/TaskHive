@@ -103,12 +103,12 @@ export default function Home() {
 
     // Apply role-based filtering
     if (activeFilters.showOwnOnly) {
-      // Show only current user's data
+      // Show only current user's own data
       filtered = filtered.filter(task => task.empId === userProfile.empId);
     } else {
       // Team data mode - apply hierarchy-specific filters
 
-      // If specific hierarchy filter is selected, show only that person's data
+      // If specific person filter is selected, show only that person's data
       if (activeFilters.techLead) {
         filtered = filtered.filter(task => task.empId === activeFilters.techLead);
       } else if (activeFilters.teamLeader) {
@@ -118,46 +118,58 @@ export default function Home() {
       } else if (activeFilters.employee) {
         filtered = filtered.filter(task => task.empId === activeFilters.employee);
       } else {
-        // No specific filter selected - show based on role permissions
-        filtered = filtered.filter(task => {
-          switch (userProfile.role) {
-            case 'tech-lead':
-              // Show all subordinates data in managed teams (team-leaders, track-leads, employees)
-              if (!userProfile.managedTeams?.includes(task.teamName)) return false;
+        // No specific filter - apply role-based default filtering
+        switch (userProfile.role) {
+          case 'tech-lead':
+            // Tech-leads can see subordinates data (exclude other tech-leads)
+            filtered = filtered.filter(task => {
+              // Exclude other tech-leads data (from techLeads team, but not current user)
+              if (task.teamName === 'techLeads' && task.empId !== userProfile.empId) {
+                return false;
+              }
 
-              // Include team-leaders, track-leads, and employees (exclude other tech-leads)
-              const isTeamLeader = filterOptions.teamLeaders.some(tl => tl.empId === task.empId);
+              // Include own data and subordinates from managed teams
+              if (task.empId === userProfile.empId) return true;
+
+              // Include subordinates from managed teams
+              return userProfile.managedTeams?.includes(task.teamName) && task.teamName !== 'techLeads';
+            });
+            break;
+
+          case 'team-leader':
+            // Team leaders see track-leads and employees in their team + own data
+            filtered = filtered.filter(task => {
+              if (task.empId === userProfile.empId) return true;
+              if (task.teamName !== userProfile.teamName) return false;
+
+              // Include track-leads and employees, exclude other team-leaders
               const isTrackLead = filterOptions.trackLeads.some(tl => tl.empId === task.empId);
               const isEmployee = filterOptions.employees.some(emp => emp.empId === task.empId);
 
-              return isTeamLeader || isTrackLead || isEmployee;
+              return isTrackLead || isEmployee;
+            });
+            break;
 
-            case 'team-leader':
-              // Show track-leads and employees data in their team
-              if (task.teamName !== userProfile.teamName) return false;
-
-              const isTrackLeadInTeam = filterOptions.trackLeads.some(tl =>
-                tl.empId === task.empId && tl.teamName === userProfile.teamName);
-              const isEmployeeInTeam = filterOptions.employees.some(emp =>
-                emp.empId === task.empId && emp.teamName === userProfile.teamName);
-
-              return isTrackLeadInTeam || isEmployeeInTeam;
-
-            case 'track-lead':
-              // Show only direct report employees data
+          case 'track-lead':
+            // Track leads see their direct reports + own data
+            filtered = filtered.filter(task => {
+              if (task.empId === userProfile.empId) return true;
               if (task.teamName !== userProfile.teamName) return false;
 
               return filterOptions.employees.some(emp =>
-                emp.empId === task.empId && emp.reportsTo === userProfile.empId);
+                emp.empId === task.empId && emp.reportsTo === userProfile.empId
+              );
+            });
+            break;
 
-            case 'employee':
-              // Employees cannot see team data, fallback to own data
-              return task.empId === userProfile.empId;
+          case 'employee':
+            // Employees see only own data
+            filtered = filtered.filter(task => task.empId === userProfile.empId);
+            break;
 
-            default:
-              return false;
-          }
-        });
+          default:
+            filtered = [];
+        }
       }
     }
 
@@ -166,7 +178,7 @@ export default function Home() {
       filtered = filtered.filter(task => task.teamName === selectedTeam);
     }
 
-    // Apply task attribute filters
+    // Apply other filters (status, workType, etc.)
     if (activeFilters.status) {
       filtered = filtered.filter(task => task.status === activeFilters.status);
     }
@@ -235,42 +247,83 @@ export default function Home() {
     try {
       if (!userProfile) return;
 
-      let tasksData;
-      let teamFilter = null;
-      let empIdFilter = null;
+      let allTasks = [];
 
-      // Apply base filtering for data loading
       if (filters.showOwnOnly) {
-        empIdFilter = userProfile.empId;
-        teamFilter = userProfile.teamName;
-      } else {
-        // Team mode - load all accessible data for client-side filtering
+        // Load only current user's data
+        let teamToLoad, empIdFilter;
+
         if (userProfile.role === 'tech-lead') {
-          if (selectedTeam !== 'all') {
-            teamFilter = selectedTeam;
-          }
-          // Don't set empIdFilter - load all data for tech-leads
+          teamToLoad = 'techLeads';
+          empIdFilter = userProfile.empId;
         } else {
-          teamFilter = userProfile.teamName;
-          // Don't set empIdFilter - load all team data for filtering
+          teamToLoad = userProfile.teamName;
+          empIdFilter = userProfile.empId;
+        }
+
+        let tasksData;
+        if (filters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') &&
+          filters.dateTo === format(startOfToday(), 'yyyy-MM-dd')) {
+          tasksData = await getTasks(userProfile, teamToLoad);
+          tasksData = tasksData.filter(task => task.empId === userProfile.empId);
+        } else {
+          tasksData = await getTasksForDateRange(
+            userProfile,
+            filters.dateFrom,
+            filters.dateTo,
+            teamToLoad,
+            empIdFilter
+          );
+        }
+
+        allTasks = tasksData;
+
+      } else {
+        // Team mode - load data for role-based filtering
+        const teamsToLoad = new Set();
+
+        switch (userProfile.role) {
+          case 'tech-lead':
+            teamsToLoad.add('techLeads'); // For own data
+            if (selectedTeam !== 'all') {
+              if (userProfile.managedTeams?.includes(selectedTeam)) {
+                teamsToLoad.add(selectedTeam);
+              }
+            } else {
+              userProfile.managedTeams?.forEach(team => teamsToLoad.add(team));
+            }
+            break;
+
+          case 'team-leader':
+          case 'track-lead':
+          case 'employee':
+            teamsToLoad.add(userProfile.teamName);
+            break;
+        }
+
+        for (const teamName of teamsToLoad) {
+          try {
+            let teamTasks = [];
+            if (filters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') &&
+              filters.dateTo === format(startOfToday(), 'yyyy-MM-dd')) {
+              teamTasks = await getTasks(userProfile, teamName);
+            } else {
+              teamTasks = await getTasksForDateRange(
+                userProfile,
+                filters.dateFrom,
+                filters.dateTo,
+                teamName,
+                null
+              );
+            }
+            allTasks = [...allTasks, ...teamTasks];
+          } catch (error) {
+            console.error(`Error loading data from team ${teamName}:`, error);
+          }
         }
       }
 
-      // Use appropriate data loading method
-      if (filters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') &&
-        filters.dateTo === format(startOfToday(), 'yyyy-MM-dd')) {
-        tasksData = await getTasks(userProfile, teamFilter);
-      } else {
-        tasksData = await getTasksForDateRange(
-          userProfile,
-          filters.dateFrom,
-          filters.dateTo,
-          teamFilter,
-          empIdFilter
-        );
-      }
-
-      setTasks(tasksData.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      setTasks(allTasks.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } catch (error) {
       console.error('Error loading tasks for date range:', error);
       showAlert('Error loading tasks: ' + error.message, 'error');

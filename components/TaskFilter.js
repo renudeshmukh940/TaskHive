@@ -809,7 +809,7 @@ const TaskFilter = ({
                                 </FormControl>
                             </Grid>
 
-                            <Grid item xs={12} sm={6} md={3}>
+                            {/* <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth variant="outlined">
                                     <InputLabel shrink>Work Type</InputLabel>
                                     <Select
@@ -825,9 +825,9 @@ const TaskFilter = ({
                                         <MenuItem value="Relaxation">Relaxation</MenuItem>
                                     </Select>
                                 </FormControl>
-                            </Grid>
+                            </Grid> */}
 
-                            <Grid item xs={12} sm={6} md={3}>
+                            {/* <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth variant="outlined">
                                     <InputLabel shrink>Progress</InputLabel>
                                     <Select
@@ -844,9 +844,9 @@ const TaskFilter = ({
                                         <MenuItem value="76-100">76-100%</MenuItem>
                                     </Select>
                                 </FormControl>
-                            </Grid>
+                            </Grid> */}
 
-                            <Grid item xs={12} sm={6} md={3}>
+                            {/* <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth variant="outlined">
                                     <InputLabel shrink>Client</InputLabel>
                                     <Select
@@ -862,7 +862,7 @@ const TaskFilter = ({
                                         <MenuItem value="Client C">Client C</MenuItem>
                                     </Select>
                                 </FormControl>
-                            </Grid>
+                            </Grid> */}
                         </Grid>
 
                         {/* Active Filter Chips */}
