@@ -4,20 +4,25 @@ import {
   Container, Typography, Alert, CircularProgress, Box,
   TextField, MenuItem, Paper, Chip, AppBar, Toolbar, Button, Avatar
 } from '@mui/material';
+
 import { Dashboard, FilterList, Logout, Person, CalendarToday } from '@mui/icons-material'; // Added CalendarToday
 import { useAuth } from '../contexts/AuthContext';
 import TaskForm from '../components/TaskForm';
 import TaskTable from '../components/TaskTable';
 import TaskFilter from '../components/TaskFilter';
+
 import {
   getTasks,
+  getTasksForDateRange,
   updateTask,
   deleteTask,
   getAccessibleTeams,
-  applyTaskFilters
+  applyTaskFilters,
+  getFilterOptions
 } from '../lib/firebase';
+
 import WeeklyReport from '../components/WeeklyReport';
-import { format, startOfToday } from 'date-fns';
+import { format, startOfToday, addDays, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 
 
 export default function Home() {
@@ -34,36 +39,154 @@ export default function Home() {
     dateTo: format(startOfToday(), 'yyyy-MM-dd'),
     showOwnOnly: true,
   });
+  const dateRangeOptions = [
+    { value: 'today', label: 'Today', from: format(startOfToday(), 'yyyy-MM-dd'), to: format(startOfToday(), 'yyyy-MM-dd') },
+    { value: 'yesterday', label: 'Yesterday', from: format(addDays(startOfToday(), -1), 'yyyy-MM-dd'), to: format(addDays(startOfToday(), -1), 'yyyy-MM-dd') },
+    {
+      value: 'thisWeek',
+      label: `This Week`,
+      from: format(startOfWeek(startOfToday()), 'yyyy-MM-dd'),
+      to: format(endOfWeek(startOfToday()), 'yyyy-MM-dd')
+    },
+    {
+      value: 'lastWeek',
+      label: `Last Week`,
+      from: format(startOfWeek(subWeeks(startOfToday(), 1)), 'yyyy-MM-dd'),
+      to: format(endOfWeek(subWeeks(startOfToday(), 1)), 'yyyy-MM-dd')
+    }
+  ];
+  const [filterOptions, setFilterOptions] = useState({
+    techLeads: [],
+    teamLeaders: [],
+    trackLeads: [],
+    employees: [],
+    teams: []
+  });
 
   useEffect(() => {
     if (userProfile) {
       loadAccessibleTeams();
+      loadFilterOptions();
       loadTasks();
     }
   }, [userProfile]);
 
-  // Apply filters whenever tasks or filters change
   useEffect(() => {
-    if (tasks.length > 0) {
-      let filtered = [...tasks];
-      const taskFilters = { ...activeFilters };
-      delete taskFilters.dateFrom;
-      delete taskFilters.dateTo;
-      delete taskFilters.showOwnOnly;
+    applyClientSideFilters();
+  }, [tasks, activeFilters, userProfile, filterOptions]);
 
-      if (Object.keys(taskFilters).some(key => taskFilters[key])) {
-        filtered = applyTaskFilters(filtered, taskFilters, userProfile);
-      }
-
-      if (!activeFilters.showOwnOnly && selectedTeam !== 'all') {
-        filtered = filtered.filter(task => task.teamName === selectedTeam);
-      }
-
-      setFilteredTasks(filtered);
-    } else {
-      setFilteredTasks([]);
+  const loadFilterOptions = async () => {
+    try {
+      const options = await getFilterOptions(userProfile);
+      setFilterOptions({
+        techLeads: options.techLeads || [],
+        teamLeaders: options.teamLeaders || [],
+        trackLeads: options.trackLeads || [],
+        employees: options.employees || [],
+        teams: options.teams || []
+      });
+    } catch (error) {
+      console.error('Error loading filter options:', error);
     }
-  }, [tasks, selectedTeam, activeFilters, userProfile]);
+  };
+
+
+  // Replace the applyClientSideFilters function in Home.js with this corrected version:
+
+  const applyClientSideFilters = () => {
+    if (tasks.length === 0) {
+      setFilteredTasks([]);
+      return;
+    }
+
+    let filtered = [...tasks];
+
+    // Apply role-based filtering
+    if (activeFilters.showOwnOnly) {
+      // Show only current user's data
+      filtered = filtered.filter(task => task.empId === userProfile.empId);
+    } else {
+      // Team data mode - apply hierarchy-specific filters
+
+      // If specific hierarchy filter is selected, show only that person's data
+      if (activeFilters.techLead) {
+        filtered = filtered.filter(task => task.empId === activeFilters.techLead);
+      } else if (activeFilters.teamLeader) {
+        filtered = filtered.filter(task => task.empId === activeFilters.teamLeader);
+      } else if (activeFilters.trackLead) {
+        filtered = filtered.filter(task => task.empId === activeFilters.trackLead);
+      } else if (activeFilters.employee) {
+        filtered = filtered.filter(task => task.empId === activeFilters.employee);
+      } else {
+        // No specific filter selected - show based on role permissions
+        filtered = filtered.filter(task => {
+          switch (userProfile.role) {
+            case 'tech-lead':
+              // Show all subordinates data in managed teams (team-leaders, track-leads, employees)
+              if (!userProfile.managedTeams?.includes(task.teamName)) return false;
+
+              // Include team-leaders, track-leads, and employees (exclude other tech-leads)
+              const isTeamLeader = filterOptions.teamLeaders.some(tl => tl.empId === task.empId);
+              const isTrackLead = filterOptions.trackLeads.some(tl => tl.empId === task.empId);
+              const isEmployee = filterOptions.employees.some(emp => emp.empId === task.empId);
+
+              return isTeamLeader || isTrackLead || isEmployee;
+
+            case 'team-leader':
+              // Show track-leads and employees data in their team
+              if (task.teamName !== userProfile.teamName) return false;
+
+              const isTrackLeadInTeam = filterOptions.trackLeads.some(tl =>
+                tl.empId === task.empId && tl.teamName === userProfile.teamName);
+              const isEmployeeInTeam = filterOptions.employees.some(emp =>
+                emp.empId === task.empId && emp.teamName === userProfile.teamName);
+
+              return isTrackLeadInTeam || isEmployeeInTeam;
+
+            case 'track-lead':
+              // Show only direct report employees data
+              if (task.teamName !== userProfile.teamName) return false;
+
+              return filterOptions.employees.some(emp =>
+                emp.empId === task.empId && emp.reportsTo === userProfile.empId);
+
+            case 'employee':
+              // Employees cannot see team data, fallback to own data
+              return task.empId === userProfile.empId;
+
+            default:
+              return false;
+          }
+        });
+      }
+    }
+
+    // Apply team filter for tech-leads
+    if (!activeFilters.showOwnOnly && selectedTeam !== 'all' && userProfile.role === 'tech-lead') {
+      filtered = filtered.filter(task => task.teamName === selectedTeam);
+    }
+
+    // Apply task attribute filters
+    if (activeFilters.status) {
+      filtered = filtered.filter(task => task.status === activeFilters.status);
+    }
+    if (activeFilters.workType) {
+      filtered = filtered.filter(task => task.workType === activeFilters.workType);
+    }
+    if (activeFilters.percentageCompletion) {
+      const [min, max] = activeFilters.percentageCompletion.split('-').map(Number);
+      filtered = filtered.filter(task => {
+        const progress = parseInt(task.percentageCompletion) || 0;
+        return progress >= min && progress <= max;
+      });
+    }
+    if (activeFilters.client) {
+      filtered = filtered.filter(task => task.client === activeFilters.client);
+    }
+
+    setFilteredTasks(filtered);
+  };
+
 
   const loadAccessibleTeams = async () => {
     try {
@@ -80,36 +203,7 @@ export default function Home() {
   };
 
   const loadTasks = async () => {
-    try {
-      if (!userProfile) return;
-
-      // Apply own data filter if active
-      const effectiveTeamFilter = activeFilters.showOwnOnly ? null : (selectedTeam === 'all' ? null : selectedTeam);
-
-      console.log(`Loading tasks for ${userProfile.role} - Show own only: ${activeFilters.showOwnOnly}, Team filter: ${effectiveTeamFilter}`);
-
-      const tasksData = await getTasks(userProfile, effectiveTeamFilter);
-
-      // Apply date range filter
-      let filtered = tasksData.filter(task => {
-        const taskDate = new Date(task.date);
-        const fromDate = activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : startOfToday();
-        const toDate = activeFilters.dateTo ? new Date(activeFilters.dateTo) : startOfToday();
-
-        return taskDate >= fromDate && taskDate <= toDate;
-      });
-
-      // If showOwnOnly is true, further filter to only user's own tasks
-      if (activeFilters.showOwnOnly) {
-        filtered = filtered.filter(task => task.empId === userProfile.empId);
-      }
-
-      setTasks(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-      showAlert('Error loading tasks: ' + error.message, 'error');
-    } finally {
-    }
+    await loadTasksForDateRange(activeFilters);
   };
 
   const showAlert = (message, severity = 'success') => {
@@ -118,15 +212,71 @@ export default function Home() {
   };
 
   const handleFilterChange = (filters) => {
-    // Merge new filters with existing ones, preserving date/own filters
+    // Handle date range changes
+    if (filters.dateRange && filters.dateRange !== activeFilters.dateRange) {
+      const selectedRange = dateRangeOptions.find(range => range.value === filters.dateRange);
+      if (selectedRange) {
+        const updatedFilters = {
+          ...activeFilters,
+          ...filters,
+          dateFrom: selectedRange.from,
+          dateTo: selectedRange.to
+        };
+        setActiveFilters(updatedFilters);
+        setTimeout(() => loadTasksForDateRange(updatedFilters), 0);
+        return;
+      }
+    }
     const updatedFilters = { ...activeFilters, ...filters };
     setActiveFilters(updatedFilters);
+  };
 
-    // Reload tasks when date or own-only filters change
-    if (filters.dateFrom || filters.dateTo || filters.showOwnOnly !== undefined) {
-      loadTasks();
+  const loadTasksForDateRange = async (filters) => {
+    try {
+      if (!userProfile) return;
+
+      let tasksData;
+      let teamFilter = null;
+      let empIdFilter = null;
+
+      // Apply base filtering for data loading
+      if (filters.showOwnOnly) {
+        empIdFilter = userProfile.empId;
+        teamFilter = userProfile.teamName;
+      } else {
+        // Team mode - load all accessible data for client-side filtering
+        if (userProfile.role === 'tech-lead') {
+          if (selectedTeam !== 'all') {
+            teamFilter = selectedTeam;
+          }
+          // Don't set empIdFilter - load all data for tech-leads
+        } else {
+          teamFilter = userProfile.teamName;
+          // Don't set empIdFilter - load all team data for filtering
+        }
+      }
+
+      // Use appropriate data loading method
+      if (filters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') &&
+        filters.dateTo === format(startOfToday(), 'yyyy-MM-dd')) {
+        tasksData = await getTasks(userProfile, teamFilter);
+      } else {
+        tasksData = await getTasksForDateRange(
+          userProfile,
+          filters.dateFrom,
+          filters.dateTo,
+          teamFilter,
+          empIdFilter
+        );
+      }
+
+      setTasks(tasksData.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    } catch (error) {
+      console.error('Error loading tasks for date range:', error);
+      showAlert('Error loading tasks: ' + error.message, 'error');
     }
   };
+
 
   const handleAddTask = async () => {
     try {
@@ -210,8 +360,18 @@ export default function Home() {
     let count = 0;
     if (activeFilters.dateFrom && activeFilters.dateFrom !== format(startOfToday(), 'yyyy-MM-dd')) count++;
     if (activeFilters.dateTo && activeFilters.dateTo !== format(startOfToday(), 'yyyy-MM-dd')) count++;
-    if (!activeFilters.showOwnOnly) count++; // Count if showing team data
+    if (!activeFilters.showOwnOnly) count++;
     if (selectedTeam !== 'all' && !activeFilters.showOwnOnly) count++;
+
+    // Count hierarchy filters
+    if (activeFilters.team) count++;
+    if (activeFilters.techLead) count++;
+    if (activeFilters.teamLeader) count++;
+    if (activeFilters.trackLead) count++;
+    if (activeFilters.employee) count++;
+    if (activeFilters.status) count++;
+    if (activeFilters.workType) count++;
+    if (activeFilters.percentageCompletion) count++;
     return count;
   };
   return (
@@ -619,6 +779,8 @@ export default function Home() {
           userProfile={userProfile}
           onFilterChange={handleFilterChange}
           currentFilters={activeFilters}
+          dateRangeOptions={dateRangeOptions}
+          filterOptions={filterOptions}
           showOwnOnly={activeFilters.showOwnOnly}
           onToggleOwnOnly={() => {
             const newShowOwnOnly = !activeFilters.showOwnOnly;
@@ -686,11 +848,11 @@ export default function Home() {
                 ? "No tasks match your current filters. Try adjusting your filter criteria."
                 : userProfile?.role === 'tech-lead'
                   ? selectedTeam === 'all'
-                    ? "No tasks found across all your managed teams."
-                    : `No tasks found for ${selectedTeam} team.`
+                    ? `No tasks found across all your managed teams for ${activeFilters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') ? 'today' : `${activeFilters.dateFrom} to ${activeFilters.dateTo}`}.`
+                    : `No tasks found for ${selectedTeam} team for ${activeFilters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') ? 'today' : `${activeFilters.dateFrom} to ${activeFilters.dateTo}`}.`
                   : userProfile?.role === 'team-leader'
-                    ? `No tasks found for your team (${userProfile.teamName}). Start by adding your first task above.`
-                    : "You have no tasks recorded yet. Add one above!"
+                    ? `No tasks found for your team (${userProfile.teamName}) for ${activeFilters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') ? 'today' : `${activeFilters.dateFrom} to ${activeFilters.dateTo}`}. Start by adding your first task above.`
+                    : `You have no tasks recorded for ${activeFilters.dateFrom === format(startOfToday(), 'yyyy-MM-dd') ? 'today' : `${activeFilters.dateFrom} to ${activeFilters.dateTo}`}. Add one above!`
               }
             </Typography>
           </Paper>
