@@ -20,6 +20,7 @@ const TaskTable = ({ tasks, userProfile, onEdit, onDelete }) => {
     });
     const [filterOptions, setFilterOptions] = useState({
         teamLeaders: [],
+        trackLeads: [],
         employees: [],
         teams: []
     });
@@ -92,8 +93,13 @@ const TaskTable = ({ tasks, userProfile, onEdit, onDelete }) => {
             filteredTasks = filteredTasks.filter(task => task.empId === downloadFilters.teamLeader);
         }
 
-        // Employee filter (for tech leads and team leaders)
-        if (downloadFilters.employee && (userProfile.role === 'tech-lead' || userProfile.role === 'team-leader')) {
+        // ← NEW: Track-lead filter (for tech leads and team leaders)
+        if (downloadFilters.trackLead && (userProfile.role === 'tech-lead' || userProfile.role === 'team-leader')) {
+            filteredTasks = filteredTasks.filter(task => task.empId === downloadFilters.trackLead);
+        }
+
+        // Employee filter (for tech leads, team leaders, track-leads)
+        if (downloadFilters.employee && (userProfile.role === 'tech-lead' || userProfile.role === 'team-leader' || userProfile.role === 'track-lead')) {
             filteredTasks = filteredTasks.filter(task => task.empId === downloadFilters.employee);
         }
 
@@ -448,13 +454,37 @@ const TaskTable = ({ tasks, userProfile, onEdit, onDelete }) => {
                                     </Grid>
                                 )}
 
+                                {(userProfile?.role === "tech-lead" || userProfile?.role === "team-leader") && (
+                                    <Grid item xs={12} md={6}>
+                                        <FormControl fullWidth variant="outlined">
+                                            <InputLabel shrink>Filter by Track Lead</InputLabel>
+                                            <Select
+                                                value={downloadFilters.trackLead || ""}
+                                                onChange={(e) =>
+                                                    handleDownloadFilterChange("trackLead", e.target.value)
+                                                }
+                                                label="Filter by Track Lead"
+                                                displayEmpty
+                                            >
+                                                <MenuItem value="">All Track Leads</MenuItem>
+                                                {filterOptions.trackLeads.map((tl) => (
+                                                    <MenuItem key={tl.empId} value={tl.empId}>
+                                                        {tl.empName} ({tl.empId}) - {tl.teamName}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                )}
+
                                 {(userProfile?.role === "tech-lead" ||
-                                    userProfile?.role === "team-leader") && (
+                                    userProfile?.role === "team-leader" ||
+                                    userProfile?.role === "track-lead") && ( // ← Added track-lead
                                         <Grid item xs={12} md={6}>
                                             <FormControl fullWidth variant="outlined">
                                                 <InputLabel shrink>Filter by Employee</InputLabel>
                                                 <Select
-                                                    value={downloadFilters.employee}
+                                                    value={downloadFilters.employee || ""}
                                                     onChange={(e) =>
                                                         handleDownloadFilterChange("employee", e.target.value)
                                                     }

@@ -17,34 +17,46 @@ import {
   applyTaskFilters
 } from '../lib/firebase';
 import WeeklyReport from '../components/WeeklyReport';
+import { format, startOfToday } from 'date-fns';
+
 
 export default function Home() {
   const { userProfile, logout } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ show: false, message: '', severity: 'success' });
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [accessibleTeams, setAccessibleTeams] = useState([]);
-  const [activeFilters, setActiveFilters] = useState({});
   const [weeklyReportOpen, setWeeklyReportOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    dateFrom: format(startOfToday(), 'yyyy-MM-dd'),
+    dateTo: format(startOfToday(), 'yyyy-MM-dd'),
+    showOwnOnly: true,
+  });
 
   useEffect(() => {
     if (userProfile) {
       loadAccessibleTeams();
       loadTasks();
     }
-  }, [userProfile, selectedTeam]);
+  }, [userProfile]);
 
   // Apply filters whenever tasks or filters change
   useEffect(() => {
     if (tasks.length > 0) {
-      let filtered = selectedTeam === 'all' ? tasks : tasks.filter(task => task.teamName === selectedTeam);
+      let filtered = [...tasks];
+      const taskFilters = { ...activeFilters };
+      delete taskFilters.dateFrom;
+      delete taskFilters.dateTo;
+      delete taskFilters.showOwnOnly;
 
-      // Apply additional filters from TaskFilter component
-      if (Object.keys(activeFilters).some(key => activeFilters[key])) {
-        filtered = applyTaskFilters(filtered, activeFilters, userProfile);
+      if (Object.keys(taskFilters).some(key => taskFilters[key])) {
+        filtered = applyTaskFilters(filtered, taskFilters, userProfile);
+      }
+
+      if (!activeFilters.showOwnOnly && selectedTeam !== 'all') {
+        filtered = filtered.filter(task => task.teamName === selectedTeam);
       }
 
       setFilteredTasks(filtered);
@@ -57,6 +69,11 @@ export default function Home() {
     try {
       const teams = getAccessibleTeams(userProfile);
       setAccessibleTeams(teams);
+
+      // Auto-select user's own team if available
+      if (teams.length > 0 && !activeFilters.showOwnOnly) {
+        setSelectedTeam(teams[0]);
+      }
     } catch (error) {
       showAlert('Error loading teams', 'error');
     }
@@ -66,13 +83,32 @@ export default function Home() {
     try {
       if (!userProfile) return;
 
-      const teamFilter = selectedTeam === 'all' ? null : selectedTeam;
-      const tasksData = await getTasks(userProfile, teamFilter);
-      setTasks(tasksData.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      // Apply own data filter if active
+      const effectiveTeamFilter = activeFilters.showOwnOnly ? null : (selectedTeam === 'all' ? null : selectedTeam);
+
+      console.log(`Loading tasks for ${userProfile.role} - Show own only: ${activeFilters.showOwnOnly}, Team filter: ${effectiveTeamFilter}`);
+
+      const tasksData = await getTasks(userProfile, effectiveTeamFilter);
+
+      // Apply date range filter
+      let filtered = tasksData.filter(task => {
+        const taskDate = new Date(task.date);
+        const fromDate = activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : startOfToday();
+        const toDate = activeFilters.dateTo ? new Date(activeFilters.dateTo) : startOfToday();
+
+        return taskDate >= fromDate && taskDate <= toDate;
+      });
+
+      // If showOwnOnly is true, further filter to only user's own tasks
+      if (activeFilters.showOwnOnly) {
+        filtered = filtered.filter(task => task.empId === userProfile.empId);
+      }
+
+      setTasks(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } catch (error) {
+      console.error('Error loading tasks:', error);
       showAlert('Error loading tasks: ' + error.message, 'error');
     } finally {
-      setLoading(false);
     }
   };
 
@@ -82,7 +118,14 @@ export default function Home() {
   };
 
   const handleFilterChange = (filters) => {
-    setActiveFilters(filters);
+    // Merge new filters with existing ones, preserving date/own filters
+    const updatedFilters = { ...activeFilters, ...filters };
+    setActiveFilters(updatedFilters);
+
+    // Reload tasks when date or own-only filters change
+    if (filters.dateFrom || filters.dateTo || filters.showOwnOnly !== undefined) {
+      loadTasks();
+    }
   };
 
   const handleAddTask = async () => {
@@ -147,6 +190,7 @@ export default function Home() {
     switch (role) {
       case 'tech-lead': return 'Tech Lead';
       case 'team-leader': return 'Team Leader';
+      case 'track-lead': return 'Track Lead';
       case 'employee': return 'Employee';
       default: return role;
     }
@@ -156,68 +200,20 @@ export default function Home() {
     switch (role) {
       case 'tech-lead': return 'error';
       case 'team-leader': return 'warning';
+      case 'track-lead': return 'info';
       case 'employee': return 'primary';
       default: return 'default';
     }
   };
 
   const getActiveFilterCount = () => {
-    let count = Object.keys(activeFilters).filter(key => activeFilters[key] && activeFilters[key] !== '').length;
-    if (selectedTeam !== 'all') count++; // Add team filter to count
+    let count = 0;
+    if (activeFilters.dateFrom && activeFilters.dateFrom !== format(startOfToday(), 'yyyy-MM-dd')) count++;
+    if (activeFilters.dateTo && activeFilters.dateTo !== format(startOfToday(), 'yyyy-MM-dd')) count++;
+    if (!activeFilters.showOwnOnly) count++; // Count if showing team data
+    if (selectedTeam !== 'all' && !activeFilters.showOwnOnly) count++;
     return count;
   };
-
-  if (loading) {
-    return (
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-        position: 'relative',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at 30% 20%, rgba(25, 118, 210, 0.05) 0%, transparent 50%)',
-          pointerEvents: 'none'
-        }
-      }}>
-        <Box sx={{
-          padding: 4,
-          borderRadius: 4,
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.3)',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-          textAlign: 'center'
-        }}>
-          <CircularProgress
-            size={60}
-            thickness={4}
-            sx={{
-              color: '#1976d2',
-              filter: 'drop-shadow(0 0 8px rgba(25, 118, 210, 0.3))'
-            }}
-          />
-          <Typography variant="h6" sx={{
-            mt: 2,
-            color: '#1976d2',
-            fontWeight: 600,
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
-          }}>
-            Loading your workspace...
-          </Typography>
-        </Box>
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{
       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
@@ -623,6 +619,22 @@ export default function Home() {
           userProfile={userProfile}
           onFilterChange={handleFilterChange}
           currentFilters={activeFilters}
+          showOwnOnly={activeFilters.showOwnOnly}
+          onToggleOwnOnly={() => {
+            const newShowOwnOnly = !activeFilters.showOwnOnly;
+            setActiveFilters(prev => ({
+              ...prev,
+              showOwnOnly: newShowOwnOnly,
+              ...(newShowOwnOnly && {
+                team: '',
+                techLead: '',
+                teamLeader: '',
+                trackLead: '',
+                employee: ''
+              })
+            }));
+            loadTasks();
+          }}
         />
 
         {/* Tasks Table */}

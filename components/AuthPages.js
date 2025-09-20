@@ -1,4 +1,4 @@
-// components/AuthPages.js
+// components/AuthPages.js - Updated with Employee → Track-Lead → Team-Leader hierarchy
 import React, { useState, useEffect } from 'react';
 import {
     Box, Paper, TextField, Button, Typography, Alert,
@@ -27,6 +27,7 @@ const PREDEFINED_TEAMS = [
 
 const ROLES = [
     { value: 'employee', label: 'Employee' },
+    { value: 'track-lead', label: 'Track Lead' },
     { value: 'team-leader', label: 'Team Leader' },
     { value: 'tech-lead', label: 'Tech Lead' }
 ];
@@ -40,7 +41,9 @@ const AuthPages = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const { signIn, signUp } = useAuth();
 
-    const [teamLeaderOptions, setTeamLeaderOptions] = useState([]); // For employees
+    // Updated state for hierarchy selection
+    const [trackLeadOptions, setTrackLeadOptions] = useState([]);    // For employees
+    const [teamLeaderOptions, setTeamLeaderOptions] = useState([]);  // For track-leads
     const [techLeadOptions, setTechLeadOptions] = useState([]);     // For team leaders
     const [selectedTeamInfo, setSelectedTeamInfo] = useState(null); // { teamLeaderId, techLeadId }
 
@@ -60,7 +63,7 @@ const AuthPages = () => {
         empId: '',
         empName: '',
         managedTeams: [],
-        reportsTo: ''
+        reportsTo: '' // This will now be Track-Lead for employees, Team-Leader for track-leads, Tech-Lead for team-leaders
     });
 
     // Password validation
@@ -96,6 +99,7 @@ const AuthPages = () => {
         const fetchTeamInfo = async () => {
             if (!registerData.teamName) {
                 setSelectedTeamInfo(null);
+                setTrackLeadOptions([]);
                 setTeamLeaderOptions([]);
                 setTechLeadOptions([]);
                 return;
@@ -114,8 +118,29 @@ const AuthPages = () => {
 
                 setSelectedTeamInfo(data);
 
-                // For EMPLOYEE: Show only the team leader assigned to this team
+                // For EMPLOYEE: Show track-leads assigned to this team
                 if (registerData.role === 'employee') {
+                    // Get all track-leads for this team
+                    const trackLeadsQuery = query(
+                        collection(db, 'users'),
+                        where('role', '==', 'track-lead'),
+                        where('teamName', '==', registerData.teamName)
+                    );
+                    const trackLeadsSnapshot = await getDocs(trackLeadsQuery);
+                    const trackLeads = trackLeadsSnapshot.docs.map(doc => doc.data());
+
+                    if (trackLeads.length > 0) {
+                        setTrackLeadOptions(trackLeads.map(tl => ({
+                            empId: tl.empId,
+                            empName: tl.empName
+                        })));
+                    } else {
+                        setTrackLeadOptions([]);
+                    }
+                }
+
+                // For TRACK-LEAD: Show only the team leader assigned to this team
+                if (registerData.role === 'track-lead') {
                     const tlEmpId = data.teamLeaderId;
                     if (tlEmpId) {
                         const q = query(
@@ -166,6 +191,7 @@ const AuthPages = () => {
             } catch (error) {
                 console.error('Error fetching team info:', error);
                 setSelectedTeamInfo(null);
+                setTrackLeadOptions([]);
                 setTeamLeaderOptions([]);
                 setTechLeadOptions([]);
             }
@@ -238,20 +264,29 @@ const AuthPages = () => {
             return;
         }
 
-        // Auto-fill reportsTo based on role and team
+        // Updated reportsTo validation based on role hierarchy
         let reportsTo = '';
-        if (registerData.role === 'employee' && selectedTeamInfo?.teamLeaderId) {
-            reportsTo = selectedTeamInfo.teamLeaderId;
-        } else if (registerData.role === 'team-leader' && selectedTeamInfo?.techLeadId) {
-            reportsTo = selectedTeamInfo.techLeadId;
-        } else if (registerData.role === 'employee' && !selectedTeamInfo?.teamLeaderId) {
-            showSnackbar('No team leader assigned to this team. Please contact admin.', 'error');
-            setLoading(false);
-            return;
-        } else if (registerData.role === 'team-leader' && !selectedTeamInfo?.techLeadId) {
-            showSnackbar('No tech lead assigned to this team. Please contact admin.', 'error');
-            setLoading(false);
-            return;
+        if (registerData.role === 'employee') {
+            // Employee must select a Track-Lead
+            if (!registerData.reportsTo || trackLeadOptions.length === 0) {
+                showSnackbar('Please select a Track Lead. No track leads available for this team.', 'error');
+                setLoading(false);
+                return;
+            }
+        } else if (registerData.role === 'track-lead') {
+            // Track-Lead must select a Team-Leader
+            if (!registerData.reportsTo || teamLeaderOptions.length === 0) {
+                showSnackbar('No team leader assigned to this team. Please contact admin.', 'error');
+                setLoading(false);
+                return;
+            }
+        } else if (registerData.role === 'team-leader') {
+            // Team-Leader must select a Tech-Lead
+            if (!registerData.reportsTo || techLeadOptions.length === 0) {
+                showSnackbar('No tech lead assigned to this team. Please contact admin.', 'error');
+                setLoading(false);
+                return;
+            }
         }
 
         try {
@@ -262,7 +297,7 @@ const AuthPages = () => {
                 empId: registerData.empId,
                 empName: registerData.empName,
                 managedTeams: registerData.role === 'tech-lead' ? registerData.managedTeams : [],
-                reportsTo: reportsTo,
+                reportsTo: registerData.reportsTo, // Now properly set based on hierarchy
                 createdAt: new Date().toISOString()
             };
 
@@ -293,7 +328,7 @@ const AuthPages = () => {
             }
 
             // Add user to teamMembers collection (for fast lookups)
-            if (registerData.role === 'employee' || registerData.role === 'team-leader') {
+            if (registerData.role !== 'tech-lead') {
                 await setDoc(
                     doc(db, 'teamMembers', registerData.teamName, 'members', registerData.empId),
                     {
@@ -301,7 +336,7 @@ const AuthPages = () => {
                         empName: registerData.empName,
                         role: registerData.role,
                         teamName: registerData.teamName,
-                        reportsTo: reportsTo,
+                        reportsTo: registerData.reportsTo,
                         joinedAt: new Date().toISOString()
                     }
                 );
@@ -416,7 +451,7 @@ const AuthPages = () => {
                     </Tabs>
 
                     <Box sx={{ p: 4 }}>
-                        {/* Login Form */}
+                        {/* Login Form - Unchanged */}
                         {activeTab === 0 && (
                             <form onSubmit={handleLogin}>
                                 <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 600, mb: 3 }}>
@@ -425,13 +460,19 @@ const AuthPages = () => {
 
                                 <TextField
                                     fullWidth
-                                    label="Email Address"
+                                    label="Email"
                                     type="email"
                                     value={loginData.email}
                                     onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
-                                    margin="normal"
                                     required
-                                    autoComplete="email"
+                                    sx={{
+                                        mb: 2,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            '&:hover fieldset': { borderColor: '#1976d2' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2' }
+                                        }
+                                    }}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
@@ -439,28 +480,22 @@ const AuthPages = () => {
                                             </InputAdornment>
                                         ),
                                     }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: 2,
-                                            '&:hover fieldset': {
-                                                borderColor: '#1976d2',
-                                            },
-                                            '&.Mui-focused fieldset': {
-                                                borderColor: '#1976d2',
-                                            }
-                                        }
-                                    }}
                                 />
-
                                 <TextField
                                     fullWidth
                                     label="Password"
                                     type={showPassword ? 'text' : 'password'}
                                     value={loginData.password}
                                     onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                                    margin="normal"
                                     required
-                                    autoComplete="current-password"
+                                    sx={{
+                                        mb: 3,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            '&:hover fieldset': { borderColor: '#1976d2' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2' }
+                                        }
+                                    }}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
@@ -478,19 +513,7 @@ const AuthPages = () => {
                                             </InputAdornment>
                                         ),
                                     }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: 2,
-                                            '&:hover fieldset': {
-                                                borderColor: '#1976d2',
-                                            },
-                                            '&.Mui-focused fieldset': {
-                                                borderColor: '#1976d2',
-                                            }
-                                        }
-                                    }}
                                 />
-
                                 <Button
                                     type="submit"
                                     fullWidth
@@ -498,8 +521,6 @@ const AuthPages = () => {
                                     size="large"
                                     disabled={loading}
                                     sx={{
-                                        mt: 3,
-                                        mb: 2,
                                         py: 1.5,
                                         borderRadius: 2,
                                         background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
@@ -509,7 +530,12 @@ const AuthPages = () => {
                                         '&:hover': {
                                             background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
                                             boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)',
-                                        }
+                                            transform: 'translateY(-2px)'
+                                        },
+                                        '&:disabled': {
+                                            background: '#ccc'
+                                        },
+                                        transition: 'all 0.2s ease'
                                     }}
                                 >
                                     {loading ? 'Signing In...' : 'Sign In'}
@@ -517,14 +543,104 @@ const AuthPages = () => {
                             </form>
                         )}
 
-                        {/* Register Form */}
+                        {/* Register Form - Updated Hierarchy */}
                         {activeTab === 1 && (
                             <form onSubmit={handleRegister}>
                                 <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 600, mb: 3 }}>
-                                    Create Your Account
+                                    Create New Account
                                 </Typography>
 
-                                {/* Employee Details Section */}
+                                <TextField
+                                    fullWidth
+                                    label="Email"
+                                    type="email"
+                                    value={registerData.email}
+                                    onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
+                                    required
+                                    sx={{
+                                        mb: 2,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            '&:hover fieldset': { borderColor: '#1976d2' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2' }
+                                        }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Email sx={{ color: '#1976d2' }} />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={registerData.password}
+                                    onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
+                                    required
+                                    sx={{
+                                        mb: 2,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            '&:hover fieldset': { borderColor: '#1976d2' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2' }
+                                        }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Lock sx={{ color: '#1976d2' }} />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    edge="end"
+                                                >
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Confirm Password"
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    value={registerData.confirmPassword}
+                                    onChange={(e) => setRegisterData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                    required
+                                    sx={{
+                                        mb: 3,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            '&:hover fieldset': { borderColor: '#1976d2' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2' }
+                                        }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Lock sx={{ color: '#1976d2' }} />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                    edge="end"
+                                                >
+                                                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+
+                                {/* Personal Information Card - Unchanged */}
                                 <Card variant="outlined" sx={{ mb: 3, borderRadius: 2, border: '1px solid #e3f2fd' }}>
                                     <CardContent sx={{ p: 2 }}>
                                         <Typography variant="subtitle1" sx={{ color: '#1976d2', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
@@ -532,60 +648,12 @@ const AuthPages = () => {
                                             Personal Information
                                         </Typography>
 
-                                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                                            <TextField
-                                                fullWidth
-                                                label="Employee ID"
-                                                value={registerData.empId}
-                                                onChange={(e) => setRegisterData(prev => ({ ...prev, empId: e.target.value }))}
-                                                required
-                                                InputProps={{
-                                                    startAdornment: (
-                                                        <InputAdornment position="start">
-                                                            <Badge sx={{ color: '#1976d2' }} />
-                                                        </InputAdornment>
-                                                    ),
-                                                }}
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        borderRadius: 2,
-                                                        '&:hover fieldset': { borderColor: '#1976d2' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1976d2' }
-                                                    }
-                                                }}
-                                            />
-
-                                            <TextField
-                                                fullWidth
-                                                label="Full Name"
-                                                value={registerData.empName}
-                                                onChange={(e) => setRegisterData(prev => ({ ...prev, empName: e.target.value }))}
-                                                required
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        borderRadius: 2,
-                                                        '&:hover fieldset': { borderColor: '#1976d2' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1976d2' }
-                                                    }
-                                                }}
-                                            />
-                                        </Box>
-
                                         <TextField
                                             fullWidth
-                                            label="Email Address"
-                                            type="email"
-                                            value={registerData.email}
-                                            onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
+                                            label="Employee ID"
+                                            value={registerData.empId}
+                                            onChange={(e) => setRegisterData(prev => ({ ...prev, empId: e.target.value }))}
                                             required
-                                            autoComplete="email"
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Email sx={{ color: '#1976d2' }} />
-                                                    </InputAdornment>
-                                                ),
-                                            }}
                                             sx={{
                                                 mb: 2,
                                                 '& .MuiOutlinedInput-root': {
@@ -594,102 +662,39 @@ const AuthPages = () => {
                                                     '&.Mui-focused fieldset': { borderColor: '#1976d2' }
                                                 }
                                             }}
-                                        />
-
-                                        <TextField
-                                            fullWidth
-                                            label="Password"
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={registerData.password}
-                                            onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
-                                            required
-                                            autoComplete="new-password"
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <Lock sx={{ color: '#1976d2' }} />
+                                                        <Badge sx={{ color: '#1976d2' }} />
                                                     </InputAdornment>
                                                 ),
-                                                endAdornment: (
-                                                    <InputAdornment position="end">
-                                                        <IconButton
-                                                            onClick={() => setShowPassword(!showPassword)}
-                                                            edge="end"
-                                                        >
-                                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                ),
-                                            }}
-                                            sx={{
-                                                mb: 1,
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#1976d2' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1976d2' }
-                                                }
                                             }}
                                         />
-
-                                        {/* Password Strength Indicator */}
-                                        {registerData.password && (
-                                            <Box sx={{ mb: 2 }}>
-                                                <Typography variant="caption" sx={{ color: passwordStrength.color, fontWeight: 600 }}>
-                                                    Password Strength: {passwordStrength.strength}
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
-                                                    {Object.entries(validatePassword(registerData.password)).map(([key, valid], index) => (
-                                                        <Box
-                                                            key={key}
-                                                            sx={{
-                                                                flex: 1,
-                                                                height: 4,
-                                                                borderRadius: 2,
-                                                                backgroundColor: valid ? passwordStrength.color : '#e0e0e0',
-                                                                transition: 'backgroundColor 0.3s'
-                                                            }}
-                                                        />
-                                                    ))}
-                                                </Box>
-                                            </Box>
-                                        )}
-
                                         <TextField
                                             fullWidth
-                                            label="Confirm Password"
-                                            type={showConfirmPassword ? 'text' : 'password'}
-                                            value={registerData.confirmPassword}
-                                            onChange={(e) => setRegisterData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                            label="Full Name"
+                                            value={registerData.empName}
+                                            onChange={(e) => setRegisterData(prev => ({ ...prev, empName: e.target.value }))}
                                             required
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Lock sx={{ color: '#1976d2' }} />
-                                                    </InputAdornment>
-                                                ),
-                                                endAdornment: (
-                                                    <InputAdornment position="end">
-                                                        <IconButton
-                                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                            edge="end"
-                                                        >
-                                                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                ),
-                                            }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: 2,
                                                     '&:hover fieldset': { borderColor: '#1976d2' },
                                                     '&.Mui-focused fieldset': { borderColor: '#1976d2' }
                                                 }
+                                            }}
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <Person sx={{ color: '#1976d2' }} />
+                                                    </InputAdornment>
+                                                ),
                                             }}
                                         />
                                     </CardContent>
                                 </Card>
 
-                                {/* Role and Team Section */}
+                                {/* Role and Team Section - Updated Hierarchy */}
                                 <Card variant="outlined" sx={{ mb: 3, borderRadius: 2, border: '1px solid #e3f2fd' }}>
                                     <CardContent sx={{ p: 2 }}>
                                         <Typography variant="subtitle1" sx={{ color: '#1976d2', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
@@ -707,7 +712,7 @@ const AuthPages = () => {
                                                 role: e.target.value,
                                                 managedTeams: e.target.value === 'tech-lead' ? [] : prev.managedTeams,
                                                 teamName: e.target.value === 'tech-lead' ? '' : prev.teamName,
-                                                reportsTo: ''
+                                                reportsTo: '' // Reset reportsTo when role changes
                                             }))}
                                             required
                                             sx={{
@@ -726,14 +731,18 @@ const AuthPages = () => {
                                             ))}
                                         </TextField>
 
-                                        {/* Team Selection for Employee and Team Leader */}
-                                        {(registerData.role === 'employee' || registerData.role === 'team-leader') && (
+                                        {/* Team Selection for Employee, Track-Lead, and Team Leader */}
+                                        {(registerData.role === 'employee' || registerData.role === 'track-lead' || registerData.role === 'team-leader') && (
                                             <TextField
                                                 select
                                                 fullWidth
                                                 label="Team"
                                                 value={registerData.teamName}
-                                                onChange={(e) => setRegisterData(prev => ({ ...prev, teamName: e.target.value }))}
+                                                onChange={(e) => setRegisterData(prev => ({
+                                                    ...prev,
+                                                    teamName: e.target.value,
+                                                    reportsTo: '' // Reset reportsTo when team changes
+                                                }))}
                                                 required
                                                 sx={{
                                                     mb: 2,
@@ -752,8 +761,53 @@ const AuthPages = () => {
                                             </TextField>
                                         )}
 
-                                        {/* Reports To Fields */}
+                                        {/* Updated Reports To Fields Based on Role Hierarchy */}
+
+                                        {/* EMPLOYEE: Select Track-Lead */}
                                         {registerData.role === 'employee' && (
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                label="Track Lead"
+                                                value={registerData.reportsTo}
+                                                onChange={(e) => setRegisterData(prev => ({ ...prev, reportsTo: e.target.value }))}
+                                                required
+                                                disabled={!registerData.teamName || trackLeadOptions.length === 0}
+                                                error={!registerData.reportsTo && !!registerData.teamName}
+                                                helperText={
+                                                    !registerData.teamName
+                                                        ? "Select a team first..."
+                                                        : trackLeadOptions.length === 0 && registerData.teamName
+                                                            ? "No track leads assigned to this team yet. Please contact admin."
+                                                            : !registerData.reportsTo && registerData.teamName
+                                                                ? "Please select your Track Lead"
+                                                                : ""
+                                                }
+                                                sx={{
+                                                    mb: 2,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: 2,
+                                                        '&:hover fieldset': { borderColor: '#1976d2' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1976d2' }
+                                                    }
+                                                }}
+                                            >
+                                                <MenuItem value="">
+                                                    <em>Select Track Lead</em>
+                                                </MenuItem>
+                                                {trackLeadOptions.map((tl) => (
+                                                    <MenuItem key={tl.empId} value={tl.empId}>
+                                                        {tl.empName} ({tl.empId})
+                                                    </MenuItem>
+                                                ))}
+                                                {trackLeadOptions.length === 0 && !!registerData.teamName && (
+                                                    <MenuItem disabled>No track leads available for this team</MenuItem>
+                                                )}
+                                            </TextField>
+                                        )}
+
+                                        {/* TRACK-LEAD: Select Team Leader */}
+                                        {registerData.role === 'track-lead' && (
                                             <TextField
                                                 select
                                                 fullWidth
@@ -793,6 +847,7 @@ const AuthPages = () => {
                                             </TextField>
                                         )}
 
+                                        {/* TEAM LEADER: Select Tech Lead */}
                                         {registerData.role === 'team-leader' && (
                                             <TextField
                                                 select
@@ -833,7 +888,7 @@ const AuthPages = () => {
                                             </TextField>
                                         )}
 
-                                        {/* Multiple Team Selection for Tech Lead */}
+                                        {/* Multiple Team Selection for Tech Lead - Unchanged */}
                                         {registerData.role === 'tech-lead' && (
                                             <Box>
                                                 <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, color: '#666' }}>
