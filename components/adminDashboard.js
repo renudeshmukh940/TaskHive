@@ -259,7 +259,7 @@ const AdminDashboard = ({ userProfile }) => {
         const chartData = stats.recentActivity.map(activity => ({
             team: activity.team,
             tasks: activity.tasks,
-            hours: parseFloat(activity.hours)
+            hours: activity.hours
         })).sort((a, b) => b.tasks - a.tasks).slice(0, 8);
 
         return (
@@ -275,11 +275,12 @@ const AdminDashboard = ({ userProfile }) => {
                         <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
                         <Tooltip
-                            formatter={(value, name) => [
-                                name === 'tasks' ? `${value} tasks` : `${value} hours`,
-                                name === 'tasks' ? 'Tasks' : 'Hours'
+                            formatter={(value, name, props) => [
+                                props.dataKey === 'tasks' ? `${value} tasks` : `${value} hours`,
+                                props.dataKey === 'tasks' ? 'Tasks' : 'Hours'
                             ]}
                         />
+
                         <Legend />
                         <Bar yAxisId="left" dataKey="tasks" fill="#3B82F6" name="Tasks" radius={4} />
                         <Bar yAxisId="right" dataKey="hours" fill="#10B981" name="Hours" radius={4} />
