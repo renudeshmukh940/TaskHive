@@ -27,10 +27,6 @@ import AdminDashboard from '../components/adminDashboard';
 
 export default function Home() {
   const { userProfile, logout } = useAuth();
-  if (userProfile?.role === 'admin') {
-    console.log('Admin detected, redirecting to AdminDashboard');
-    return <AdminDashboard userProfile={userProfile} />;
-  }
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
@@ -66,18 +62,6 @@ export default function Home() {
     employees: [],
     teams: []
   });
-
-  useEffect(() => {
-    if (userProfile) {
-      loadAccessibleTeams();
-      loadFilterOptions();
-      loadTasks();
-    }
-  }, [userProfile]);
-
-  useEffect(() => {
-    applyClientSideFilters();
-  }, [tasks, activeFilters, userProfile, filterOptions]);
 
   const loadFilterOptions = async () => {
     try {
@@ -392,6 +376,23 @@ export default function Home() {
       }
     }
   };
+
+  useEffect(() => {
+    if (userProfile) {
+      loadAccessibleTeams();
+      loadFilterOptions();
+      loadTasks();
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    applyClientSideFilters();
+  }, [tasks, activeFilters, userProfile, filterOptions]);
+  
+  if (userProfile?.role === 'admin') {
+    console.log('Admin detected, redirecting to AdminDashboard');
+    return <AdminDashboard userProfile={userProfile} />;
+  }
 
   const getRoleDisplayName = (role) => {
     switch (role) {
