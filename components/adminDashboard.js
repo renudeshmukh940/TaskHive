@@ -507,7 +507,7 @@ const AdminDashboard = ({ userProfile }) => {
 
                         <div className="space-y-4">
                             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">Today's Productivity</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">Today&apos;s Productivity</h3>
                                 <p className="text-3xl font-bold text-blue-600">{insights.totalHoursToday}h</p>
                                 <p className="text-sm text-gray-500">Total hours logged</p>
                             </div>
