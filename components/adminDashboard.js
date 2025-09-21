@@ -488,7 +488,7 @@ const AdminDashboard = ({ userProfile }) => {
                             <div className="flex items-center space-x-2">
                                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                                     <span className="text-white text-sm font-medium">
-                                        {userProfile?.empName?.charAt(0).toUpperCase() || "A"}
+                                        {userProfile?.empName?.charAt(0).toUpperCase() || 'A'}
                                     </span>
                                 </div>
                                 <span className="text-gray-700 font-medium hidden md:block">{userProfile?.empName || 'Admin'}</span>
@@ -710,7 +710,7 @@ const AdminDashboard = ({ userProfile }) => {
                         <div className="bg-white rounded-2xl p-12 shadow-sm border border-gray-100 text-center">
                             <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Team</h3>
-                            <p className="text-gray-500">{"Choose a team from the dropdown to view detailed insights for " + currentDateLabel}</p>
+                            <p className="text-gray-500">Choose a team from the dropdown to view detailed insights for {currentDateLabel}</p>
                         </div>
                     )}
                 </main>
