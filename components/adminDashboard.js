@@ -3,6 +3,7 @@ import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Cartesia
 import { Calendar, Users, Briefcase, Activity, TrendingUp, Clock, CheckCircle, AlertCircle, BarChart3, Download, Filter, Search, Bell, Settings, User, Menu, Home, Target, FileText, Building2, Zap, Timer, Award, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 import { getAdminDashboardStats, getTeamInsights, getDateRange } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 
 const AdminDashboard = ({ userProfile }) => {
     const [stats, setStats] = useState(null);
@@ -13,6 +14,7 @@ const AdminDashboard = ({ userProfile }) => {
     const [dateRange, setDateRange] = useState('7days');
     const [activeView, setActiveView] = useState('overview');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const { logout } = useAuth();
 
     const dateRanges = [
         { value: 'today', label: 'Today', icon: Calendar },
@@ -176,10 +178,10 @@ const AdminDashboard = ({ userProfile }) => {
                 </div>
                 {change && (
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${changeType === 'positive'
-                            ? 'bg-green-50 text-green-600'
-                            : changeType === 'negative'
-                                ? 'bg-red-50 text-red-600'
-                                : 'bg-gray-50 text-gray-600'
+                        ? 'bg-green-50 text-green-600'
+                        : changeType === 'negative'
+                            ? 'bg-red-50 text-red-600'
+                            : 'bg-gray-50 text-gray-600'
                         }`}>
                         {change}
                     </div>
@@ -236,7 +238,7 @@ const AdminDashboard = ({ userProfile }) => {
                         className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-300"
                         style={{
                             width: `${(team.projects.completed /
-                                    (team.projects.completed + team.projects.inProgress + team.projects.onHold || 1)) * 100
+                                (team.projects.completed + team.projects.inProgress + team.projects.onHold || 1)) * 100
                                 }%`
                         }}
                     />
@@ -344,8 +346,8 @@ const AdminDashboard = ({ userProfile }) => {
                     <div key={performer.empId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${index === 0 ? 'bg-yellow-500' :
-                                    index === 1 ? 'bg-gray-400' :
-                                        index === 2 ? 'bg-orange-400' : 'bg-blue-500'
+                                index === 1 ? 'bg-gray-400' :
+                                    index === 2 ? 'bg-orange-400' : 'bg-blue-500'
                                 }`}>
                                 {index + 1}
                             </div>
@@ -421,8 +423,8 @@ const AdminDashboard = ({ userProfile }) => {
                             key={item.id}
                             onClick={() => setActiveView(item.id)}
                             className={`w-full flex items-center px-6 py-3 text-left hover:bg-blue-50 transition-colors ${activeView === item.id
-                                    ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                                    : 'text-gray-600'
+                                ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
+                                : 'text-gray-600'
                                 }`}
                         >
                             <item.icon className="w-5 h-5" />
@@ -482,13 +484,23 @@ const AdminDashboard = ({ userProfile }) => {
                                 Export ({dateRange})
                             </button>
 
+                            {/* User Profile with Logout */}
                             <div className="flex items-center space-x-2">
                                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                                     <span className="text-white text-sm font-medium">
                                         {userProfile?.empName?.charAt(0).toUpperCase() || 'A'}
                                     </span>
                                 </div>
-                                <span className="text-gray-700 font-medium">{userProfile?.empName || 'Admin'}</span>
+                                <span className="text-gray-700 font-medium hidden md:block">{userProfile?.empName || 'Admin'}</span>
+                                <button
+                                    onClick={logout}
+                                    className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium ml-2"
+                                    title="Logout"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>
