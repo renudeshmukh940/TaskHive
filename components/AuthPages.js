@@ -717,7 +717,7 @@ const AuthPages = () => {
                                         </Box>
                                         <Box sx={{ textAlign: 'center' }}>
                                             <Typography variant="body2" color="textSecondary">
-                                                Don't Have An Account?{' '}
+                                                Don&apos;t Have An Account?{' '}
                                                 <Button
                                                     variant="text"
                                                     onClick={() => setActiveTab(1)}
