@@ -416,13 +416,6 @@ const AuthPages = () => {
                     />
                 </Box>
             </Box>
-
-            {/* Footer */}
-            {/* <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    MpOnline LTD. © 2007
-                </Typography>
-            </Box> */}
         </Box>
     );
 
@@ -744,8 +737,7 @@ const AuthPages = () => {
                                     flex: 1,
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    height: '100%',
-                                    pb: 2 // Add some bottom padding
+                                    height: '300%',
                                 }}>
                                     <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
                                         Create your account to get started with team management.

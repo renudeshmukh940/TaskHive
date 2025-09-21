@@ -1,4 +1,3 @@
-// Updated components/TaskFilter.js - Add date range selection and optimize for today's data by default
 import React, { useState, useEffect } from 'react';
 import {
     Box, TextField, MenuItem, Button, Typography, Grid,

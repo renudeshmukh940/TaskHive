@@ -23,6 +23,7 @@ import {
     getPredefinedValues,
     isPredefinedField,
     canUserAccessTeam,
+    getTasksForEmployee
 } from '../lib/firebase';
 
 const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
@@ -56,6 +57,14 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
     const [isTeamSelected, setIsTeamSelected] = useState(false);
     const [permissionAlert, setPermissionAlert] = useState('');
     const [dailyTasksState, setDailyTasksState] = useState([]);
+    const [dailyTimeSummary, setDailyTimeSummary] = useState({
+        totalUsed: 0,
+        totalHours: 0,
+        totalMinutes: 0,
+        remaining: 9,
+        overTime: 0,
+        isLoaded: false
+    });
 
     useEffect(() => {
         if (userProfile) {
@@ -69,6 +78,20 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             }
         }
     }, [editTask, userProfile]);
+
+    useEffect(() => {
+        if (formData.date && formData.empId && formData.teamName) {
+            loadDailyTimeSummary();
+        }
+    }, [formData.date, formData.empId, formData.teamName, dailyTasksState, editTask]);
+
+    const [dailyHoursTracking, setDailyHoursTracking] = useState({
+        normalHours: 0,
+        extraHours: 0,
+        totalHours: 0
+    });
+    const [timeValidationMessage, setTimeValidationMessage] = useState('');
+    const [validationTrigger, setValidationTrigger] = useState(0);
 
     const initializeUserData = async () => {
         try {
@@ -180,43 +203,164 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         }
     };
 
-  const validateTimeForWorkType = (workType, timeSpent) => {
-  if (!workType || !timeSpent) return null;
+    const validateTimeForWorkType = async (workType, timeSpent, isEdit = false, editTaskId = null) => {
+        if (!workType || !timeSpent || !formData.date || !formData.empId) return null;
 
-  const timePattern = /^(\d{1,2}):(\d{2})$/;
-  const match = timeSpent.match(timePattern);
-  if (!match) return "Invalid time format (HH:MM)";
+        const timePattern = /^(\d{1,2}):(\d{2})$/;
+        const match = timeSpent.match(timePattern);
+        if (!match) {
+            setTimeValidationMessage("Invalid time format (HH:MM)");
+            return "Invalid time format (HH:MM)";
+        }
 
-  const hours = parseInt(match[1], 10);
-  const minutes = parseInt(match[2], 10);
-  const totalHours = hours + minutes / 60;
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const currentTaskHours = hours + minutes / 60;
 
-  let requiredHours = 0;
-  switch (workType.toLowerCase()) {
-    case "full-day": requiredHours = 9; break;
-    case "half-day": requiredHours = 4.5; break;
-    case "relaxation": requiredHours = 7; break;
-    case "over time": requiredHours = 9; break;
-    default: return null;
-  }
+        // Get existing tasks for daily tracking FIRST
+        let existingTasks = [];
+        try {
+            existingTasks = await getTasksForEmployee(formData.teamName, formData.empId, formData.date) || [];
+        } catch (err) {
+            existingTasks = [];
+        }
 
-  const diff = totalHours - requiredHours;
+        const dailyTasks = dailyTasksState || [];
+        let totalDailyHours = 0;
 
-  if (diff < 0) {
-    const diffHours = Math.floor(-diff);
-    const diffMinutes = Math.round((-diff - diffHours) * 60);
-    // सिर्फ warning message, save allow
-    return `You are short by ${diffHours}:${diffMinutes.toString().padStart(2,"0")} hours.`;
-  } else if (diff > 0 && workType.toLowerCase() !== "over time") {
-    const diffHours = Math.floor(diff);
-    const diffMinutes = Math.round((diff - diffHours) * 60);
-    // Save block
-    return `Exceeded by ${diffHours}:${diffMinutes.toString().padStart(2,"0")} hours. Task cannot be saved.`;
-  }
+        // Calculate existing backend tasks (EXCLUDE current task being edited)
+        existingTasks.forEach(task => {
+            if (isEdit && task.id === editTaskId) return;
 
-  return null; // Perfect hours
-};
+            const match = task.timeSpent?.match(timePattern);
+            if (match) {
+                const h = parseInt(match[1], 10);
+                const m = parseInt(match[2], 10);
+                const taskHours = h + m / 60;
+                totalDailyHours += taskHours;
+            }
+        });
 
+        // Add frontend unsaved tasks (only for new tasks, not for edit)
+        if (!isEdit) {
+            dailyTasks.forEach(task => {
+                const match = task.timeSpent?.match(timePattern);
+                if (match) {
+                    const h = parseInt(match[1], 10);
+                    const m = parseInt(match[2], 10);
+                    const taskHours = h + m / 60;
+                    totalDailyHours += taskHours;
+                }
+            });
+        }
+
+        // Calculate what the total will be with current task
+        const projectedDailyTotal = totalDailyHours + currentTaskHours;
+
+        // Determine required hours based on work type - UPDATED LOGIC
+        let minHours = 0;
+        let maxHours = null;
+
+        switch (workType.toLowerCase()) {
+            case "full-day":
+                minHours = 0;
+                maxHours = 9;
+                break;
+            case "half-day":
+                minHours = 0;
+                maxHours = 4.5;
+                break;
+            case "relaxation":
+                minHours = 0;
+                maxHours = 7;
+                break;
+            case "over time":
+                // For Over Time: Check if projected daily total will be >= 9
+                if (projectedDailyTotal < 9) {
+                    const shortfall = 9 - projectedDailyTotal;
+                    const shortHours = Math.floor(shortfall);
+                    const shortMinutes = Math.round((shortfall - shortHours) * 60);
+                    const errorMsg = `Over Time requires daily total ≥ 9h. Current: ${totalDailyHours.toFixed(1)}h + ${currentTaskHours.toFixed(1)}h = ${projectedDailyTotal.toFixed(1)}h. Need ${shortHours}:${shortMinutes.toString().padStart(2, '0')} more.`;
+                    setTimeValidationMessage(errorMsg);
+                    return errorMsg;
+                }
+                minHours = 0; // Individual task can be any amount
+                maxHours = null; // No upper limit
+                break;
+        }
+
+        // Validate individual task time against work type requirements (for non-overtime)
+        if (workType.toLowerCase() !== "over time") {
+            if (currentTaskHours < minHours) {
+                const diff = minHours - currentTaskHours;
+                const diffHours = Math.floor(diff);
+                const diffMinutes = Math.round((diff - diffHours) * 60);
+                const errorMsg = `${workType} requires minimum ${minHours}h. You are short by ${diffHours}:${diffMinutes.toString().padStart(2, '0')} hours.`;
+                setTimeValidationMessage(errorMsg);
+                return errorMsg;
+            }
+
+            if (maxHours && currentTaskHours > maxHours) {
+                const diff = currentTaskHours - maxHours;
+                const diffHours = Math.floor(diff);
+                const diffMinutes = Math.round((diff - diffHours) * 60);
+                const errorMsg = `${workType} allows maximum ${maxHours}h. Exceeded by ${diffHours}:${diffMinutes.toString().padStart(2, '0')} hours. Task cannot be saved.`;
+                setTimeValidationMessage(errorMsg);
+                return errorMsg;
+            }
+        }
+
+        // Calculate normal vs extra hours distribution
+        let normalHours = 0;
+        let extraHours = 0;
+
+        if (projectedDailyTotal <= 9) {
+            normalHours = projectedDailyTotal;
+            extraHours = 0;
+        } else {
+            normalHours = 9;
+            extraHours = projectedDailyTotal - 9;
+        }
+
+        // Update tracking state
+        setDailyHoursTracking({
+            normalHours: normalHours,
+            extraHours: extraHours,
+            totalHours: projectedDailyTotal
+        });
+
+        // Generate validation message
+        let message = '';
+        if (isEdit) {
+            message = `[EDIT MODE] `;
+        }
+
+        if (extraHours > 0) {
+            const extraHoursInt = Math.floor(extraHours);
+            const extraMinutes = Math.round((extraHours - extraHoursInt) * 60);
+
+            // Check if daily total exceeds 9 hours and it's not "Over Time"
+            if (workType.toLowerCase() !== "over time") {
+                message += `Daily limit exceeded! ${normalHours}h normal + ${extraHoursInt}:${extraMinutes.toString().padStart(2, '0')} extra. Use "Over Time" work type for extra hours.`;
+                setTimeValidationMessage(message);
+                return "Daily 9-hour limit exceeded. Please use 'Over Time' work type for additional hours or reduce time.";
+            } else {
+                message += `Daily: ${normalHours}h normal + ${extraHoursInt}:${extraMinutes.toString().padStart(2, '0')} over time`;
+            }
+        } else {
+            const remainingHours = 9 - normalHours;
+            if (remainingHours > 0) {
+                const remainingHoursInt = Math.floor(remainingHours);
+                const remainingMinutes = Math.round((remainingHours - remainingHoursInt) * 60);
+                message += `${normalHours.toFixed(1)}/9h used. ${remainingHoursInt}:${remainingMinutes.toString().padStart(2, '0')} remaining`;
+            } else {
+                message += `9/9h normal time used. Use "Over Time" work type for additional hours.`;
+            }
+        }
+
+        setTimeValidationMessage(message);
+        return null;
+    };
 
     const handleChange = (field, value) => {
         setFormData(prev => {
@@ -269,32 +413,33 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                     newData.clientId = selectedClient.id;
                 }
             }
-  if (field === "workType" && value && !newData.timeSpent) {
-            switch (value) {
-                case "Full-day": newData.timeSpent = "9:00"; break;
-                case "Half-day": newData.timeSpent = "4:30"; break;
-                case "Relaxation": newData.timeSpent = "7:00"; break;
-                case "Over Time": newData.timeSpent = "10:00"; break;
-                default: break;
+            if (field === "workType" && value && !newData.timeSpent) {
+                switch (value) {
+                    case "Full-day": newData.timeSpent = "9:00"; break;
+                    case "Half-day": newData.timeSpent = "4:30"; break;
+                    case "Relaxation": newData.timeSpent = "7:00"; break;
+                    case "Over Time": newData.timeSpent = "10:00"; break;
+                    default: break;
+                }
             }
-        }
 
-        // ✅ Live validation
-        const validationMsg = validateTimeForWorkType(newData.workType, newData.timeSpent);
-        if (validationMsg) {
-            setErrors(prev => ({ ...prev, timeSpent: validationMsg }));
-        } else if (errors.timeSpent) {
-            setErrors(prev => ({ ...prev, timeSpent: '' }));
-        }
-
-      
             return newData;
         });
+
+        if ((field === 'timeSpent' || field === 'workType') && formData.date && formData.empId) {
+            const timeSpentValue = field === 'timeSpent' ? value : formData.timeSpent;
+            const workTypeValue = field === 'workType' ? value : formData.workType;
+
+            if (timeSpentValue && workTypeValue) {
+                // Trigger validation after state update
+                setValidationTrigger(prev => prev + 1);
+            }
+        }
 
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: '' }));
         }
-    };
+    }
 
     const handleSaveOption = async (field, options) => {
         if (formData.teamName && !isPredefinedField(field)) {
@@ -304,6 +449,72 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             } catch (error) {
                 console.error('Error saving dropdown data:', error);
             }
+        }
+    };
+
+    const loadDailyTimeSummary = async () => {
+        if (!formData.date || !formData.empId || !formData.teamName) {
+            setDailyTimeSummary({ totalUsed: 0, totalHours: 0, totalMinutes: 0, remaining: 9, overTime: 0, isLoaded: false });
+            return;
+        }
+
+        try {
+            const existingTasks = await getTasksForEmployee(formData.teamName, formData.empId, formData.date) || [];
+            const dailyTasks = dailyTasksState || [];
+
+            let totalMinutes = 0; // Use minutes for accurate calculation
+            const timePattern = /^(\d{1,2}):(\d{2})$/;
+
+            // Calculate existing backend tasks (exclude current task if editing)
+            existingTasks.forEach(task => {
+                if (editTask && task.id === editTask.id) return;
+
+                const match = task.timeSpent?.match(timePattern);
+                if (match) {
+                    const h = parseInt(match[1], 10);
+                    const m = parseInt(match[2], 10);
+                    totalMinutes += (h * 60) + m; // Convert to total minutes
+                }
+            });
+
+            // Add frontend unsaved tasks (only for new tasks, not for edit)
+            if (!editTask) {
+                dailyTasks.forEach(task => {
+                    const match = task.timeSpent?.match(timePattern);
+                    if (match) {
+                        const h = parseInt(match[1], 10);
+                        const m = parseInt(match[2], 10);
+                        totalMinutes += (h * 60) + m; // Convert to total minutes
+                    }
+                });
+            }
+
+            // Convert total minutes back to hours and minutes
+            const totalHours = Math.floor(totalMinutes / 60);
+            const remainingMinutes = totalMinutes % 60;
+            const totalDecimalHours = totalMinutes / 60; // For calculations
+
+            // Calculate remaining/overtime using minutes for precision
+            let remaining = 0;
+            let overTime = 0;
+
+            if (totalMinutes <= 540) { // 540 minutes = 9 hours
+                remaining = (540 - totalMinutes) / 60; // Convert back to hours
+            } else {
+                overTime = (totalMinutes - 540) / 60; // Convert back to hours
+            }
+
+            setDailyTimeSummary({
+                totalUsed: totalDecimalHours,
+                totalHours: totalHours,
+                totalMinutes: remainingMinutes,
+                remaining: remaining,
+                overTime: overTime,
+                isLoaded: true
+            });
+        } catch (error) {
+            console.error('Error loading daily time summary:', error);
+            setDailyTimeSummary({ totalUsed: 0, totalHours: 0, totalMinutes: 0, remaining: 9, overTime: 0, isLoaded: false });
         }
     };
 
@@ -424,150 +635,67 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         }
     };
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) return;
-
-       
 
         try {
             if (!formData.teamName?.trim()) {
                 throw new Error('Team name is required');
             }
 
- const timePattern = /^(\d{1,2}):(\d{2})$/;
+            // Validate time tracking before submission and block if invalid
+            const timeValidationError = await validateTimeForWorkType(
+                formData.workType,
+                formData.timeSpent,
+                !!editTask,
+                editTask?.id
+            );
 
-        // Backend tasks
-        let existingTasks = [];
-        try {
-            existingTasks = await getTasksForEmployee?.(formData.teamName, formData.empId, formData.date) || [];
-        } catch (err) {
-            existingTasks = [];
-        }
-
-        // Frontend unsaved tasks
-        const dailyTasks = dailyTasksState || [];
-
-        let cumulativeHours = 0;
-
-        // Add backend tasks
-        existingTasks.forEach(task => {
-            const match = task.timeSpent?.match(timePattern);
-            if (match) {
-                const h = parseInt(match[1], 10);
-                const m = parseInt(match[2], 10);
-                cumulativeHours += h + m/60;
+            if (timeValidationError) {
+                alert(timeValidationError);
+                return; // Block submission
             }
-        });
 
-        // Add daily unsaved tasks
-        dailyTasks.forEach(task => {
-            const match = task.timeSpent?.match(timePattern);
-            if (match) {
-                const h = parseInt(match[1], 10);
-                const m = parseInt(match[2], 10);
-                cumulativeHours += h + m/60;
-            }
-        });
-
-        // Add current task
-        const matchCurrent = formData.timeSpent.match(timePattern);
-        let currentHours = 0;
-        if (matchCurrent) {
-            const h = parseInt(matchCurrent[1], 10);
-            const m = parseInt(matchCurrent[2], 10);
-            currentHours = h + m/60;
-        }
-
-        const totalHours = cumulativeHours + currentHours;
-
-        // Determine required hours and max hours for workType
-        let requiredHours = 0;
-        let maxHours = null;
-
-        switch (formData.workType.toLowerCase()) {
-            case "full-day":
-                requiredHours = 9;
-                break;
-            case "half-day":
-                requiredHours = 4.5;
-                break;
-            case "relaxation":
-                requiredHours = 7;
-                break;
-            case "over time":
-                requiredHours = 9; // minimum 9 hours
-                maxHours = null;    // no max limit
-                break;
-        }
-
-        const diff = totalHours - requiredHours;
-
-        // Validation
-        if (maxHours && totalHours > maxHours) {
-            const exceeded = totalHours - maxHours;
-            const diffHours = Math.floor(exceeded);
-            const diffMinutes = Math.round((exceeded - diffHours) * 60);
-            alert(`Over Time exceeded max limit by ${diffHours}:${diffMinutes.toString().padStart(2,'0')} hours. Task cannot be saved.`);
-            return;
-        } else if (diff > 0 && formData.workType.toLowerCase() !== "over time") {
-            const diffHours = Math.floor(diff);
-            const diffMinutes = Math.round((diff - diffHours) * 60);
-            alert(`Cumulative time exceeded by ${diffHours}:${diffMinutes.toString().padStart(2,'0')} hours. Task cannot be saved.`);
-            return;
-        } else if (diff < 0) {
-            const diffHours = Math.floor(-diff);
-            const diffMinutes = Math.round((-diff - diffHours)*60);
-            console.warn(`You are short by ${diffHours}:${diffMinutes.toString().padStart(2,'0')} hours. You can still save task.`);
-        }
-
-        // Add current task to dailyTasksState before saving
-        setDailyTasksState(prev => [...prev, formData]);
+            // Create task data with time tracking info
+            const taskDataWithTimeTracking = {
+                ...formData,
+                normalHours: dailyHoursTracking.normalHours,
+                extraHours: dailyHoursTracking.extraHours,
+                totalDailyHours: dailyHoursTracking.totalHours
+            };
 
             await initializeTeamDefaults(formData.teamName);
+
             if (editTask) {
-                // UPDATE EXISTING TASK
                 await updateTask(
                     editTask.teamName,
                     editTask.date,
                     editTask.empId,
                     editTask.id,
                     {
-                        ...formData,
-                        teamName: editTask.teamName, // Preserve original team
-                        empId: editTask.empId,       // Preserve original employee
-                        date: editTask.date          // Preserve original date
+                        ...taskDataWithTimeTracking,
+                        teamName: editTask.teamName,
+                        empId: editTask.empId,
+                        date: editTask.date
                     },
                     userProfile
                 );
             } else {
-                // CREATE NEW TASK
-                await addTask({
-                    ...formData,
-                    teamName: formData.teamName,
-                    empId: formData.empId,
-                    empName: formData.empName,
-                    date: formData.date
-                }, userProfile);
+                await addTask(taskDataWithTimeTracking, userProfile);
+                setDailyTasksState(prev => [...prev, taskDataWithTimeTracking]);
             }
 
-            // Refresh dropdowns immediately after saving
+            // Rest remains the same...
             await refreshTeamData(formData.teamName);
-
             onSubmit(formData);
 
             if (!editTask) {
-                // Reset form for new task while preserving user context
                 const resetData = getResetFormData(userProfile);
                 setFormData(resetData);
-
-                // Determine if we should keep team-specific data loaded
                 const shouldKeepTeamData = ['tech-lead', 'team-leader', 'employee'].includes(userProfile?.role);
                 setIsTeamSelected(shouldKeepTeamData);
-
                 if (!shouldKeepTeamData) {
-                    // Clear all team-specific data for users without fixed teams
                     setDropdownOptions({});
                     setProjects([]);
                     setEmployees([]);
@@ -581,6 +709,8 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             alert(error.message || 'Error saving task');
         }
     };
+
+
 
     return (
         <Box sx={{
@@ -1032,7 +1162,7 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             fullWidth
                                             placeholder="08:30"
                                             error={!!errors.timeSpent}
-                                            helperText={errors.timeSpent}
+                                            helperText={errors.timeSpent || timeValidationMessage}
                                             size="small"
                                             InputProps={{
                                                 startAdornment: (
@@ -1046,6 +1176,16 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                                     borderRadius: 2,
                                                     '&:hover fieldset': { borderColor: '#2e7d32' },
                                                     '&.Mui-focused fieldset': { borderColor: '#2e7d32' }
+                                                },
+                                                '& .MuiFormHelperText-root': {
+                                                    color: errors.timeSpent
+                                                        ? '#d32f2f'
+                                                        : dailyHoursTracking.extraHours > 0 && formData.workType?.toLowerCase() !== 'over time'
+                                                            ? '#f57c00'
+                                                            : dailyHoursTracking.extraHours > 0
+                                                                ? '#2e7d32'
+                                                                : '#666',
+                                                    fontWeight: dailyHoursTracking.extraHours > 0 ? 600 : 400
                                                 }
                                             }}
                                         />
@@ -1195,6 +1335,49 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             }}
                                         />
                                     </Grid>
+                                </Grid>
+                                {/* Time Remaining Display */}
+                                <Grid item xs={12} md={6}>
+                                    <Card
+                                        variant="outlined"
+                                        sx={{
+                                            width: '22%',
+                                            mt: 5,
+                                            p: 1.5,
+                                            backgroundColor: dailyTimeSummary.overTime > 0 ? '#fff3e0' : '#f0f7ff',
+                                            border: dailyTimeSummary.overTime > 0 ? '1px solid #f57c00' : '1px solid #1976d2'
+                                        }}
+                                    >
+                                        <Typography variant="caption" sx={{ display: 'block', color: '#666', mb: 0.5 }}>
+                                            Daily Time Summary ({formData.date || 'Select date'})
+                                        </Typography>
+                                        {dailyTimeSummary.isLoaded ? (
+                                            <>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        color: dailyTimeSummary.overTime > 0 ? '#f57c00' : '#1976d2'
+                                                    }}
+                                                >
+                                                    Used: {dailyTimeSummary.totalHours}h {dailyTimeSummary.totalMinutes}m / 9h
+                                                </Typography>
+                                                {dailyTimeSummary.remaining > 0 ? (
+                                                    <Typography variant="body2" sx={{ color: '#2e7d32' }}>
+                                                        Remaining: {Math.floor(dailyTimeSummary.remaining)}h {Math.round((dailyTimeSummary.remaining % 1) * 60)}m
+                                                    </Typography>
+                                                ) : (
+                                                    <Typography variant="body2" sx={{ color: '#f57c00' }}>
+                                                        Over Time: +{Math.floor(dailyTimeSummary.overTime)}h {Math.round((dailyTimeSummary.overTime % 1) * 60)}m
+                                                    </Typography>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <Typography variant="body2" sx={{ color: '#666' }}>
+                                                Loading time summary...
+                                            </Typography>
+                                        )}
+                                    </Card>
                                 </Grid>
                             </CardContent>
                         </Card>

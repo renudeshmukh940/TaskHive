@@ -388,7 +388,7 @@ export default function Home() {
   useEffect(() => {
     applyClientSideFilters();
   }, [tasks, activeFilters, userProfile, filterOptions]);
-  
+
   if (userProfile?.role === 'admin') {
     console.log('Admin detected, redirecting to AdminDashboard');
     return <AdminDashboard userProfile={userProfile} />;
