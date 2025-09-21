@@ -832,30 +832,516 @@ export default function Home() {
           </Paper>
         )}
 
-        {/* Task Filters - Enhanced styling */}
-        <TaskFilter
-          userProfile={userProfile}
-          onFilterChange={handleFilterChange}
-          currentFilters={activeFilters}
-          dateRangeOptions={dateRangeOptions}
-          filterOptions={filterOptions}
-          showOwnOnly={activeFilters.showOwnOnly}
-          onToggleOwnOnly={() => {
-            const newShowOwnOnly = !activeFilters.showOwnOnly;
-            setActiveFilters(prev => ({
-              ...prev,
-              showOwnOnly: newShowOwnOnly,
-              ...(newShowOwnOnly && {
-                team: '',
-                techLead: '',
-                teamLeader: '',
-                trackLead: '',
-                employee: ''
-              })
-            }));
-            loadTasks();
+        {/* REPLACE THIS SECTION WITH THE NEW COMPACT FILTER */}
+        {/* Compact Advanced Filter Section */}
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 3,
+            border: '1px solid #e2e8f0',
+            borderRadius: 2,
+            overflow: 'hidden'
           }}
-        />
+        >
+          {/* Filter Header Bar */}
+          <Box sx={{
+            backgroundColor: '#f8fafc',
+            px: 3,
+            py: 1.5,
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="subtitle2" sx={{ color: '#475569', fontWeight: 600 }}>
+                Filters
+              </Typography>
+
+              {/* Quick Date Range Pills */}
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {dateRangeOptions.map((range) => (
+                  <Chip
+                    key={range.value}
+                    label={range.label}
+                    size="small"
+                    clickable
+                    onClick={() => handleFilterChange({ dateRange: range.value })}
+                    sx={{
+                      height: 24,
+                      fontSize: '0.75rem',
+                      backgroundColor: activeFilters.dateRange === range.value ? '#1e40af' : 'transparent',
+                      color: activeFilters.dateRange === range.value ? 'white' : '#64748b',
+                      border: activeFilters.dateRange === range.value ? 'none' : '1px solid #d1d5db',
+                      '&:hover': {
+                        backgroundColor: activeFilters.dateRange === range.value ? '#1d4ed8' : '#f1f5f9'
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            {/* Filter Toggle & Status */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* Active Filter Count */}
+              {getActiveFilterCount() > 0 && (
+                <Chip
+                  label={`${getActiveFilterCount()} active`}
+                  size="small"
+                  sx={{
+                    height: 22,
+                    fontSize: '0.7rem',
+                    backgroundColor: '#fef3c7',
+                    color: '#f59e0b',
+                    border: 'none'
+                  }}
+                />
+              )}
+
+              {/* Own/Team Toggle */}
+              <Box sx={{ display: 'flex', border: '1px solid #d1d5db', borderRadius: 1, overflow: 'hidden' }}>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    if (!activeFilters.showOwnOnly) {
+                      const newShowOwnOnly = true;
+                      setActiveFilters(prev => ({
+                        ...prev,
+                        showOwnOnly: newShowOwnOnly,
+                        team: '',
+                        techLead: '',
+                        teamLeader: '',
+                        trackLead: '',
+                        employee: ''
+                      }));
+                      loadTasks();
+                    }
+                  }}
+                  sx={{
+                    minWidth: 60,
+                    py: 0.5,
+                    px: 1.5,
+                    fontSize: '0.75rem',
+                    backgroundColor: activeFilters.showOwnOnly ? '#1e40af' : 'transparent',
+                    color: activeFilters.showOwnOnly ? 'white' : '#64748b',
+                    border: 'none',
+                    borderRadius: 0,
+                    '&:hover': {
+                      backgroundColor: activeFilters.showOwnOnly ? '#1d4ed8' : '#f1f5f9',
+                      border: 'none'
+                    }
+                  }}
+                >
+                  My Tasks
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    if (activeFilters.showOwnOnly) {
+                      const newShowOwnOnly = false;
+                      setActiveFilters(prev => ({
+                        ...prev,
+                        showOwnOnly: newShowOwnOnly,
+                        team: '',
+                        techLead: '',
+                        teamLeader: '',
+                        trackLead: '',
+                        employee: ''
+                      }));
+                      loadTasks();
+                    }
+                  }}
+                  sx={{
+                    minWidth: 60,
+                    py: 0.5,
+                    px: 1.5,
+                    fontSize: '0.75rem',
+                    backgroundColor: !activeFilters.showOwnOnly ? '#1e40af' : 'transparent',
+                    color: !activeFilters.showOwnOnly ? 'white' : '#64748b',
+                    border: 'none',
+                    borderRadius: 0,
+                    borderLeft: '1px solid #d1d5db',
+                    '&:hover': {
+                      backgroundColor: !activeFilters.showOwnOnly ? '#1d4ed8' : '#f1f5f9',
+                      border: 'none',
+                      borderLeft: '1px solid #d1d5db'
+                    }
+                  }}
+                >
+                  Team
+                </Button>
+              </Box>
+
+              {/* Advanced Filters Dropdown */}
+              <TextField
+                select
+                size="small"
+                value=""
+                displayEmpty
+                sx={{
+                  minWidth: 140,
+                  '& .MuiOutlinedInput-root': {
+                    height: 32,
+                    backgroundColor: 'white',
+                    '& fieldset': { borderColor: '#d1d5db' },
+                    '&:hover fieldset': { borderColor: '#3b82f6' }
+                  },
+                  '& .MuiSelect-select': {
+                    fontSize: '0.75rem',
+                    color: '#64748b'
+                  }
+                }}
+              >
+                <MenuItem value="" disabled>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#64748b' }}>
+                    <FilterList sx={{ fontSize: 16 }} />
+                    Advanced Filters
+                  </Box>
+                </MenuItem>
+
+                {/* Status Filter */}
+                <MenuItem>
+                  <Box sx={{ width: '100%' }}>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
+                      Status
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {['In Progress', 'Completed', 'On Hold', 'Cancelled'].map((status) => (
+                        <Chip
+                          key={status}
+                          label={status}
+                          size="small"
+                          clickable
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFilterChange({ status: activeFilters.status === status ? '' : status });
+                          }}
+                          sx={{
+                            height: 22,
+                            fontSize: '0.7rem',
+                            backgroundColor: activeFilters.status === status ? '#1e40af' : '#f1f5f9',
+                            color: activeFilters.status === status ? 'white' : '#64748b',
+                            border: 'none',
+                            '&:hover': {
+                              backgroundColor: activeFilters.status === status ? '#1d4ed8' : '#e2e8f0'
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </MenuItem>
+
+                {/* Work Type Filter */}
+                <MenuItem>
+                  <Box sx={{ width: '100%' }}>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
+                      Work Type
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {['Full-day', 'Half-day', 'Over Time', 'Relaxation'].map((type) => (
+                        <Chip
+                          key={type}
+                          label={type}
+                          size="small"
+                          clickable
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFilterChange({ workType: activeFilters.workType === type ? '' : type });
+                          }}
+                          sx={{
+                            height: 22,
+                            fontSize: '0.7rem',
+                            backgroundColor: activeFilters.workType === type ? '#1e40af' : '#f1f5f9',
+                            color: activeFilters.workType === type ? 'white' : '#64748b',
+                            border: 'none',
+                            '&:hover': {
+                              backgroundColor: activeFilters.workType === type ? '#1d4ed8' : '#e2e8f0'
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </MenuItem>
+
+                {/* Team Hierarchy Filters (when not showing own only) */}
+                {!activeFilters.showOwnOnly && (
+                  <>
+                    {userProfile?.role === 'tech-lead' && filterOptions.teamLeaders?.length > 0 && (
+                      <MenuItem>
+                        <Box sx={{ width: '100%' }}>
+                          <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
+                            Team Leaders
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {filterOptions.teamLeaders.map((leader) => (
+                              <Chip
+                                key={leader.empId}
+                                label={leader.name}
+                                size="small"
+                                clickable
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFilterChange({
+                                    teamLeader: activeFilters.teamLeader === leader.empId ? '' : leader.empId
+                                  });
+                                }}
+                                sx={{
+                                  height: 22,
+                                  fontSize: '0.7rem',
+                                  backgroundColor: activeFilters.teamLeader === leader.empId ? '#1e40af' : '#f1f5f9',
+                                  color: activeFilters.teamLeader === leader.empId ? 'white' : '#64748b',
+                                  border: 'none',
+                                  '&:hover': {
+                                    backgroundColor: activeFilters.teamLeader === leader.empId ? '#1d4ed8' : '#e2e8f0'
+                                  }
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    )}
+
+                    {(userProfile?.role === 'tech-lead' || userProfile?.role === 'team-leader') && filterOptions.trackLeads?.length > 0 && (
+                      <MenuItem>
+                        <Box sx={{ width: '100%' }}>
+                          <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
+                            Track Leads
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {filterOptions.trackLeads.map((lead) => (
+                              <Chip
+                                key={lead.empId}
+                                label={lead.name}
+                                size="small"
+                                clickable
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFilterChange({
+                                    trackLead: activeFilters.trackLead === lead.empId ? '' : lead.empId
+                                  });
+                                }}
+                                sx={{
+                                  height: 22,
+                                  fontSize: '0.7rem',
+                                  backgroundColor: activeFilters.trackLead === lead.empId ? '#1e40af' : '#f1f5f9',
+                                  color: activeFilters.trackLead === lead.empId ? 'white' : '#64748b',
+                                  border: 'none',
+                                  '&:hover': {
+                                    backgroundColor: activeFilters.trackLead === lead.empId ? '#1d4ed8' : '#e2e8f0'
+                                  }
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    )}
+
+                    {filterOptions.employees?.length > 0 && (
+                      <MenuItem>
+                        <Box sx={{ width: '100%' }}>
+                          <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
+                            Employees
+                          </Typography>
+                          <Box sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 0.5,
+                            maxHeight: 120,
+                            overflow: 'auto'
+                          }}>
+                            {filterOptions.employees.map((emp) => (
+                              <Chip
+                                key={emp.empId}
+                                label={emp.name}
+                                size="small"
+                                clickable
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFilterChange({
+                                    employee: activeFilters.employee === emp.empId ? '' : emp.empId
+                                  });
+                                }}
+                                sx={{
+                                  height: 22,
+                                  fontSize: '0.7rem',
+                                  backgroundColor: activeFilters.employee === emp.empId ? '#1e40af' : '#f1f5f9',
+                                  color: activeFilters.employee === emp.empId ? 'white' : '#64748b',
+                                  border: 'none',
+                                  '&:hover': {
+                                    backgroundColor: activeFilters.employee === emp.empId ? '#1d4ed8' : '#e2e8f0'
+                                  }
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    )}
+                  </>
+                )}
+
+                {/* Custom Date Range */}
+                <MenuItem>
+                  <Box sx={{ width: '100%' }}>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
+                      Custom Date Range
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={activeFilters.dateFrom}
+                        onChange={(e) => handleFilterChange({ dateFrom: e.target.value })}
+                        sx={{
+                          flex: 1,
+                          '& .MuiOutlinedInput-root': {
+                            height: 28,
+                            fontSize: '0.75rem'
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Typography variant="caption" sx={{ color: '#64748b' }}>to</Typography>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={activeFilters.dateTo}
+                        onChange={(e) => handleFilterChange({ dateTo: e.target.value })}
+                        sx={{
+                          flex: 1,
+                          '& .MuiOutlinedInput-root': {
+                            height: 28,
+                            fontSize: '0.75rem'
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </Box>
+                  </Box>
+                </MenuItem>
+              </TextField>
+
+              {/* Clear Filters */}
+              {getActiveFilterCount() > 0 && (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setActiveFilters({
+                      dateFrom: format(startOfToday(), 'yyyy-MM-dd'),
+                      dateTo: format(startOfToday(), 'yyyy-MM-dd'),
+                      showOwnOnly: true,
+                    });
+                    loadTasks();
+                  }}
+                  sx={{
+                    fontSize: '0.75rem',
+                    color: '#64748b',
+                    border: '1px solid #d1d5db',
+                    minWidth: 'auto',
+                    px: 1.5,
+                    py: 0.5,
+                    height: 32,
+                    '&:hover': {
+                      backgroundColor: '#f1f5f9',
+                      borderColor: '#9ca3af'
+                    }
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </Box>
+          </Box>
+
+          {/* Active Filters Display (only show if filters are active) */}
+          {getActiveFilterCount() > 0 && (
+            <Box sx={{ px: 3, py: 1.5, backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
+                  Active:
+                </Typography>
+
+                {/* Date Range Chips */}
+                {(activeFilters.dateFrom !== format(startOfToday(), 'yyyy-MM-dd') ||
+                  activeFilters.dateTo !== format(startOfToday(), 'yyyy-MM-dd')) && (
+                    <Chip
+                      label={`${activeFilters.dateFrom} to ${activeFilters.dateTo}`}
+                      size="small"
+                      onDelete={() => handleFilterChange({
+                        dateFrom: format(startOfToday(), 'yyyy-MM-dd'),
+                        dateTo: format(startOfToday(), 'yyyy-MM-dd')
+                      })}
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af'
+                      }}
+                    />
+                  )}
+
+                {!activeFilters.showOwnOnly && (
+                  <Chip
+                    label="Team View"
+                    size="small"
+                    onDelete={() => {
+                      const newShowOwnOnly = true;
+                      setActiveFilters(prev => ({
+                        ...prev,
+                        showOwnOnly: newShowOwnOnly,
+                        team: '',
+                        techLead: '',
+                        teamLeader: '',
+                        trackLead: '',
+                        employee: ''
+                      }));
+                      loadTasks();
+                    }}
+                    sx={{
+                      height: 20,
+                      fontSize: '0.7rem',
+                      backgroundColor: '#fef3c7',
+                      color: '#f59e0b'
+                    }}
+                  />
+                )}
+
+                {activeFilters.status && (
+                  <Chip
+                    label={`Status: ${activeFilters.status}`}
+                    size="small"
+                    onDelete={() => handleFilterChange({ status: '' })}
+                    sx={{
+                      height: 20,
+                      fontSize: '0.7rem',
+                      backgroundColor: '#dcfce7',
+                      color: '#059669'
+                    }}
+                  />
+                )}
+
+                {activeFilters.workType && (
+                  <Chip
+                    label={`Type: ${activeFilters.workType}`}
+                    size="small"
+                    onDelete={() => handleFilterChange({ workType: '' })}
+                    sx={{
+                      height: 20,
+                      fontSize: '0.7rem',
+                      backgroundColor: '#fce7f3',
+                      color: '#be185d'
+                    }}
+                  />
+                )}
+              </Box>
+            </Box>
+          )}
+        </Paper>
 
         {/* Tasks Table */}
         <TaskTable
@@ -864,7 +1350,6 @@ export default function Home() {
           onDelete={handleDeleteTask}
           userProfile={userProfile}
         />
-
         {/* Enhanced Empty State */}
         {filteredTasks.length === 0 && (
           <Paper

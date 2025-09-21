@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Paper, TextField, Button, Grid, Typography, MenuItem, Box, Card, CardContent,
-    Chip, InputAdornment, Alert, Divider, CardHeader, Avatar
+    Chip, InputAdornment, Alert, Divider, CardHeader, Avatar, Stack
 } from '@mui/material';
 import {
     Person, Business, Assignment, DateRange, Schedule, Assessment,
@@ -714,331 +714,367 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
 
     return (
         <Box sx={{
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            backgroundColor: '#f8fafc',
             minHeight: '100vh',
-            p: 2,
-            position: 'relative',
-            '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'radial-gradient(circle at 30% 20%, rgba(25, 118, 210, 0.05) 0%, transparent 50%)',
-                pointerEvents: 'none'
-            }
+            py: 3,
+            px: 2
         }}>
-            <Card elevation={20} sx={{
-                maxWidth: 1200,
-                mx: 'auto',
-                borderRadius: 4,
-                overflow: 'hidden',
-                backdropFilter: 'blur(10px)',
-                background: 'rgba(255, 255, 255, 0.95)',
-                border: '1px solid rgba(255, 255, 255, 0.3)'
-            }}>
+            <Paper
+                elevation={0}
+                sx={{
+                    maxWidth: 1200,
+                    mx: 'auto',
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                }}
+            >
+                <Box sx={{
+                    backgroundColor: '#1e40af',
+                    color: 'white',
+                    px: 4,
+                    py: 3,
+                    borderBottom: '1px solid #e2e8f0'
+                }}>
+                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+                        {editTask ? 'Edit Task' : 'Create New Task'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        Fill in the details below to {editTask ? 'update' : 'create'} your task
+                    </Typography>
+                </Box>
 
-                <CardContent sx={{ p: 3 }}>
+                <Box sx={{ p: 4 }}>
                     {permissionAlert && (
-                        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+                        <Alert
+                            severity="warning"
+                            sx={{
+                                mb: 3,
+                                borderRadius: 1,
+                                '& .MuiAlert-icon': { color: '#f59e0b' },
+                                backgroundColor: '#fef3c7',
+                                borderLeft: '4px solid #f59e0b'
+                            }}
+                        >
                             {permissionAlert}
                         </Alert>
                     )}
 
                     <form onSubmit={handleSubmit}>
-                        {/* Basic Information & Employee Info - Side by Side */}
-                        <Grid container spacing={3} sx={{ mb: 3 }}>
-                            {/* Basic Information */}
-                            <Grid item xs={12} md={6}>
-                                <Card variant="outlined" sx={{ height: '100%', borderRadius: 3, border: '2px solid #e3f2fd' }}>
-                                    <CardContent sx={{ p: 2.5 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <Avatar sx={{ bgcolor: '#1976d2', width: 32, height: 32, mr: 1.5 }}>
-                                                <DateRange sx={{ fontSize: 18 }} />
-                                            </Avatar>
-                                            <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 600 }}>
-                                                Basic Information
-                                            </Typography>
-                                        </Box>
+                        <Stack spacing={4}>
+                            {/* Basic Information Section */}
+                            <Box>
+                                <Typography variant="h6" sx={{
+                                    color: '#1e40af',
+                                    fontWeight: 600,
+                                    mb: 3,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}>
+                                    <DateRange sx={{ fontSize: 20 }} />
+                                    Basic Information
+                                </Typography>
 
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={12}>
-                                                <TextField
-                                                    label="Date"
-                                                    type="date"
-                                                    value={formData.date}
-                                                    onChange={(e) => handleChange('date', e.target.value)}
-                                                    fullWidth
-                                                    size="small"
-                                                    InputLabelProps={{ shrink: true }}
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': {
-                                                            borderRadius: 2,
-                                                            '&:hover fieldset': { borderColor: '#1976d2' },
-                                                            '&.Mui-focused fieldset': { borderColor: '#1976d2' }
-                                                        }
-                                                    }}
-                                                />
-                                            </Grid>
+                                <Grid container spacing={3}>
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            label="Date"
+                                            type="date"
+                                            value={formData.date}
+                                            onChange={(e) => handleChange('date', e.target.value)}
+                                            fullWidth
+                                            size="small"
+                                            InputLabelProps={{ shrink: true }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
 
-                                            <Grid item xs={12}>
-                                                <TextField
-                                                    label="Team"
-                                                    value={
-                                                        formData.teamName === 'techLeads'
-                                                            ? 'Tech Lead (Personal)'
-                                                            : formData.teamName || 'N/A'
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            label="Team"
+                                            value={
+                                                formData.teamName === 'techLeads'
+                                                    ? 'Tech Lead (Personal)'
+                                                    : formData.teamName || 'N/A'
+                                            }
+                                            fullWidth
+                                            size="small"
+                                            disabled
+                                            helperText={
+                                                formData.teamName === 'techLeads'
+                                                    ? 'Your personal/administrative tasks'
+                                                    : 'Your assigned team'
+                                            }
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    backgroundColor: '#f1f5f9',
+                                                    '&.Mui-disabled': {
+                                                        backgroundColor: '#f1f5f9'
                                                     }
-                                                    fullWidth
-                                                    size="small"
-                                                    disabled
-                                                    helperText={
-                                                        formData.teamName === 'techLeads'
-                                                            ? 'Your personal/administrative tasks'
-                                                            : 'Assigned team'
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            label="Employee ID"
+                                            value={formData.empId}
+                                            fullWidth
+                                            size="small"
+                                            disabled
+                                            helperText="Your employee ID"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    backgroundColor: '#f1f5f9',
+                                                    '&.Mui-disabled': {
+                                                        backgroundColor: '#f1f5f9'
                                                     }
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                                                        backgroundColor: formData.teamName === 'techLeads' ? '#f0f7ff' : '#fafafa'
-                                                    }}
-                                                />
-                                            </Grid>
-                                        </Grid>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
 
-                            {/* Employee Information */}
-                            <Grid item xs={12} md={6}>
-                                <Card variant="outlined" sx={{ height: '100%', borderRadius: 3, border: '2px solid #e8f5e8' }}>
-                                    <CardContent sx={{ p: 2.5 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <Avatar sx={{ bgcolor: '#2e7d32', width: 32, height: 32, mr: 1.5 }}>
-                                                <Person sx={{ fontSize: 18 }} />
-                                            </Avatar>
-                                            <Typography variant="h6" sx={{ color: '#2e7d32', fontWeight: 600 }}>
-                                                Employee Information
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            label="Employee Name"
+                                            value={formData.empName}
+                                            fullWidth
+                                            size="small"
+                                            disabled
+                                            helperText="Your name"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    backgroundColor: '#f1f5f9',
+                                                    '&.Mui-disabled': {
+                                                        backgroundColor: '#f1f5f9'
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            <Divider sx={{ borderColor: '#e2e8f0' }} />
+
+                            {/* Client & Project Section */}
+                            <Box>
+                                <Typography variant="h6" sx={{
+                                    color: '#1e40af',
+                                    fontWeight: 600,
+                                    mb: 3,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}>
+                                    <AccountTree sx={{ fontSize: 20 }} />
+                                    Client & Project Information
+                                </Typography>
+
+                                <Grid container spacing={3}>
+                                    <Grid item xs={12} md={6}>
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="body2" sx={{
+                                                mb: 1,
+                                                fontWeight: 500,
+                                                color: '#475569'
+                                            }}>
+                                                Client ID
                                             </Typography>
+                                            <TextField
+                                                select
+                                                value={formData.clientId}
+                                                onChange={(e) => handleChange('clientId', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                placeholder="Select existing client ID"
+                                                sx={{
+                                                    mb: 1,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            >
+                                                {clients.map((client) => (
+                                                    <MenuItem key={client.id} value={client.id}>
+                                                        {client.id}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                            <TextField
+                                                placeholder="Or enter new Client ID"
+                                                value={formData.clientId}
+                                                onChange={(e) => handleChange('clientId', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            />
                                         </Box>
-
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={12}>
-                                                <TextField
-                                                    label="Employee ID"
-                                                    value={formData.empId}
-                                                    fullWidth
-                                                    size="small"
-                                                    disabled
-                                                    helperText="Your employee ID"
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                                                        backgroundColor: '#fafafa'
-                                                    }}
-                                                />
-                                            </Grid>
-
-                                            <Grid item xs={12}>
-                                                <TextField
-                                                    label="Employee Name"
-                                                    value={formData.empName}
-                                                    fullWidth
-                                                    size="small"
-                                                    disabled
-                                                    helperText="Your name"
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                                                        backgroundColor: '#fafafa'
-                                                    }}
-                                                />
-                                            </Grid>
-                                        </Grid>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        </Grid>
-
-                        {/* Team Selection Notice */}
-                        {!formData.teamName?.trim() && (
-                            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-                                Please enter a team name to access team-specific options.
-                            </Alert>
-                        )}
-
-                        {/* Client & Project Information */}
-                        <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: '2px solid #fff3e0' }}>
-                            <CardContent sx={{ p: 2.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar sx={{ bgcolor: '#f57c00', width: 32, height: 32, mr: 1.5 }}>
-                                        <AccountTree sx={{ fontSize: 18 }} />
-                                    </Avatar>
-                                    <Typography variant="h6" sx={{ color: '#f57c00', fontWeight: 600 }}>
-                                        Client & Project Information
-                                    </Typography>
-                                </Box>
-
-                                <Grid container spacing={2}>
-                                    {/* Client ID & Name */}
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            select
-                                            label="Client ID"
-                                            value={formData.clientId}
-                                            onChange={(e) => handleChange('clientId', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                mb: 1,
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        >
-                                            {clients.map((client) => (
-                                                <MenuItem key={client.id} value={client.id}>
-                                                    {client.id}
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                        <TextField
-                                            label="Or enter new Client ID"
-                                            value={formData.clientId}
-                                            onChange={(e) => handleChange('clientId', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <TextField
-                                            select
-                                            label="Client Name"
-                                            value={formData.clientName}
-                                            onChange={(e) => handleChange('clientName', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="body2" sx={{
                                                 mb: 1,
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        >
-                                            {clients.map((client) => (
-                                                <MenuItem key={client.name} value={client.name}>
-                                                    {client.name}
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                        <TextField
-                                            label="Or enter new Client Name"
-                                            value={formData.clientName}
-                                            onChange={(e) => handleChange('clientName', e.target.value)}
-                                            onBlur={() => handleClientSave(formData.clientId, formData.clientName)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-
-                                    {/* Project ID & Name */}
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            select
-                                            label="Project ID"
-                                            value={formData.projectId}
-                                            onChange={(e) => handleChange('projectId', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                mb: 1,
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        >
-                                            {projects.map((project) => (
-                                                <MenuItem key={project.id} value={project.id}>
-                                                    {project.id}
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                        <TextField
-                                            label="Or enter new Project ID"
-                                            value={formData.projectId}
-                                            onChange={(e) => handleChange('projectId', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        />
+                                                fontWeight: 500,
+                                                color: '#475569'
+                                            }}>
+                                                Client Name
+                                            </Typography>
+                                            <TextField
+                                                select
+                                                value={formData.clientName}
+                                                onChange={(e) => handleChange('clientName', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                placeholder="Select existing client name"
+                                                sx={{
+                                                    mb: 1,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            >
+                                                {clients.map((client) => (
+                                                    <MenuItem key={client.name} value={client.name}>
+                                                        {client.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                            <TextField
+                                                placeholder="Or enter new Client Name"
+                                                value={formData.clientName}
+                                                onChange={(e) => handleChange('clientName', e.target.value)}
+                                                onBlur={() => handleClientSave(formData.clientId, formData.clientName)}
+                                                fullWidth
+                                                size="small"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            />
+                                        </Box>
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <TextField
-                                            select
-                                            label="Project Name"
-                                            value={formData.projectName}
-                                            onChange={(e) => handleChange('projectName', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="body2" sx={{
                                                 mb: 1,
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        >
-                                            {projects.map((project) => (
-                                                <MenuItem key={project.name} value={project.name}>
-                                                    {project.name}
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                        <TextField
-                                            label="Or enter new Project Name"
-                                            value={formData.projectName}
-                                            onChange={(e) => handleChange('projectName', e.target.value)}
-                                            onBlur={() => handleProjectSave(formData.projectId, formData.projectName)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
-                                                }
-                                            }}
-                                        />
+                                                fontWeight: 500,
+                                                color: '#475569'
+                                            }}>
+                                                Project ID
+                                            </Typography>
+                                            <TextField
+                                                select
+                                                value={formData.projectId}
+                                                onChange={(e) => handleChange('projectId', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                placeholder="Select existing project ID"
+                                                sx={{
+                                                    mb: 1,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            >
+                                                {projects.map((project) => (
+                                                    <MenuItem key={project.id} value={project.id}>
+                                                        {project.id}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                            <TextField
+                                                placeholder="Or enter new Project ID"
+                                                value={formData.projectId}
+                                                onChange={(e) => handleChange('projectId', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            />
+                                        </Box>
                                     </Grid>
 
-                                    {/* Phase */}
+                                    <Grid item xs={12} md={6}>
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="body2" sx={{
+                                                mb: 1,
+                                                fontWeight: 500,
+                                                color: '#475569'
+                                            }}>
+                                                Project Name
+                                            </Typography>
+                                            <TextField
+                                                select
+                                                value={formData.projectName}
+                                                onChange={(e) => handleChange('projectName', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                placeholder="Select existing project name"
+                                                sx={{
+                                                    mb: 1,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            >
+                                                {projects.map((project) => (
+                                                    <MenuItem key={project.name} value={project.name}>
+                                                        {project.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                            <TextField
+                                                placeholder="Or enter new Project Name"
+                                                value={formData.projectName}
+                                                onChange={(e) => handleChange('projectName', e.target.value)}
+                                                onBlur={() => handleProjectSave(formData.projectId, formData.projectName)}
+                                                fullWidth
+                                                size="small"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        backgroundColor: '#f8fafc',
+                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
+                                                    }
+                                                }}
+                                            />
+                                        </Box>
+                                    </Grid>
+
                                     <Grid item xs={12}>
                                         <TextField
                                             label="Phase"
@@ -1048,30 +1084,33 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             size="small"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#f57c00' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#f57c00' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         />
                                     </Grid>
                                 </Grid>
-                            </CardContent>
-                        </Card>
+                            </Box>
 
-                        {/* Task Details */}
-                        <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: '2px solid #fce4ec' }}>
-                            <CardContent sx={{ p: 2.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar sx={{ bgcolor: '#c2185b', width: 32, height: 32, mr: 1.5 }}>
-                                        <Description sx={{ fontSize: 18 }} />
-                                    </Avatar>
-                                    <Typography variant="h6" sx={{ color: '#c2185b', fontWeight: 600 }}>
-                                        Task Details
-                                    </Typography>
-                                </Box>
+                            <Divider sx={{ borderColor: '#e2e8f0' }} />
 
-                                <Grid container spacing={2}>
+                            {/* Task Details Section */}
+                            <Box>
+                                <Typography variant="h6" sx={{
+                                    color: '#1e40af',
+                                    fontWeight: 600,
+                                    mb: 3,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}>
+                                    <Description sx={{ fontSize: 20 }} />
+                                    Task Details
+                                </Typography>
+
+                                <Grid container spacing={3}>
                                     <Grid item xs={12}>
                                         <TextField
                                             label="Task Description"
@@ -1079,15 +1118,15 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             onChange={(e) => handleChange('taskDescription', e.target.value)}
                                             fullWidth
                                             multiline
-                                            rows={3}
+                                            rows={4}
                                             required
                                             error={!!errors.taskDescription}
-                                            helperText={errors.taskDescription}
+                                            helperText={errors.taskDescription || "Provide detailed description of the task"}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#c2185b' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#c2185b' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         />
@@ -1107,9 +1146,9 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             size="small"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#c2185b' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#c2185b' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         />
@@ -1129,31 +1168,33 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             size="small"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#c2185b' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#c2185b' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         />
                                     </Grid>
                                 </Grid>
-                            </CardContent>
-                        </Card>
+                            </Box>
 
-                        {/* Status & Progress */}
-                        <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: '2px solid #e8f5e8' }}>
-                            <CardContent sx={{ p: 2.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar sx={{ bgcolor: '#2e7d32', width: 32, height: 32, mr: 1.5 }}>
-                                        <TrendingUp sx={{ fontSize: 18 }} />
-                                    </Avatar>
-                                    <Typography variant="h6" sx={{ color: '#2e7d32', fontWeight: 600 }}>
-                                        Status & Progress
-                                    </Typography>
-                                </Box>
+                            <Divider sx={{ borderColor: '#e2e8f0' }} />
 
-                                <Grid container spacing={2}>
-                                    {/* Time Spent */}
+                            {/* Status & Progress Section */}
+                            <Box>
+                                <Typography variant="h6" sx={{
+                                    color: '#1e40af',
+                                    fontWeight: 600,
+                                    mb: 3,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}>
+                                    <TrendingUp sx={{ fontSize: 20 }} />
+                                    Status & Progress
+                                </Typography>
+
+                                <Grid container spacing={3}>
                                     <Grid item xs={12} md={4}>
                                         <TextField
                                             label="Time Spent (HH:MM)"
@@ -1162,36 +1203,35 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             fullWidth
                                             placeholder="08:30"
                                             error={!!errors.timeSpent}
-                                            helperText={errors.timeSpent || timeValidationMessage}
+                                            helperText={errors.timeSpent || timeValidationMessage || "Format: HH:MM (e.g., 08:30)"}
                                             size="small"
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <AccessTime sx={{ color: '#2e7d32', fontSize: 20 }} />
+                                                        <AccessTime sx={{ color: '#64748b', fontSize: 20 }} />
                                                     </InputAdornment>
                                                 ),
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#2e7d32' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#2e7d32' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 },
                                                 '& .MuiFormHelperText-root': {
                                                     color: errors.timeSpent
-                                                        ? '#d32f2f'
+                                                        ? '#dc2626'
                                                         : dailyHoursTracking.extraHours > 0 && formData.workType?.toLowerCase() !== 'over time'
-                                                            ? '#f57c00'
+                                                            ? '#f59e0b'
                                                             : dailyHoursTracking.extraHours > 0
-                                                                ? '#2e7d32'
-                                                                : '#666',
-                                                    fontWeight: dailyHoursTracking.extraHours > 0 ? 600 : 400
+                                                                ? '#059669'
+                                                                : '#64748b',
+                                                    fontWeight: dailyHoursTracking.extraHours > 0 ? 500 : 400
                                                 }
                                             }}
                                         />
                                     </Grid>
 
-                                    {/* Status */}
                                     <Grid item xs={12} md={4}>
                                         <TextField
                                             select
@@ -1201,36 +1241,36 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             fullWidth
                                             required
                                             error={!!errors.status}
-                                            helperText={errors.status || "Select from predefined values only"}
+                                            helperText={errors.status || "Select task status"}
                                             size="small"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#2e7d32' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#2e7d32' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         >
                                             {dropdownOptions.status?.map((status) => (
                                                 <MenuItem key={status} value={status}>
-                                                    <Chip
-                                                        label={status}
-                                                        size="small"
-                                                        color={
-                                                            status === 'Completed'
-                                                                ? 'success'
-                                                                : status === 'In Progress'
-                                                                    ? 'primary'
-                                                                    : 'warning'
-                                                        }
-                                                        variant="outlined"
-                                                    />
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Box
+                                                            sx={{
+                                                                width: 8,
+                                                                height: 8,
+                                                                borderRadius: '50%',
+                                                                backgroundColor:
+                                                                    status === 'Completed' ? '#059669' :
+                                                                        status === 'In Progress' ? '#3b82f6' : '#f59e0b'
+                                                            }}
+                                                        />
+                                                        {status}
+                                                    </Box>
                                                 </MenuItem>
                                             ))}
                                         </TextField>
                                     </Grid>
 
-                                    {/* Work Type */}
                                     <Grid item xs={12} md={4}>
                                         <TextField
                                             select
@@ -1240,13 +1280,13 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             fullWidth
                                             required
                                             error={!!errors.workType}
-                                            helperText={errors.workType || "Select from predefined values only"}
+                                            helperText={errors.workType || "Select work type"}
                                             size="small"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#2e7d32' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#2e7d32' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         >
@@ -1255,21 +1295,23 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                                     <Chip
                                                         label={workType}
                                                         size="small"
-                                                        color={
-                                                            workType === 'Full-day'
-                                                                ? 'success'
-                                                                : workType === 'Half-day'
-                                                                    ? 'primary'
-                                                                    : 'secondary'
-                                                        }
                                                         variant="outlined"
+                                                        sx={{
+                                                            borderColor:
+                                                                workType === 'Full-day' ? '#059669' :
+                                                                    workType === 'Half-day' ? '#3b82f6' :
+                                                                        workType === 'Over Time' ? '#dc2626' : '#64748b',
+                                                            color:
+                                                                workType === 'Full-day' ? '#059669' :
+                                                                    workType === 'Half-day' ? '#3b82f6' :
+                                                                        workType === 'Over Time' ? '#dc2626' : '#64748b'
+                                                        }}
                                                     />
                                                 </MenuItem>
                                             ))}
                                         </TextField>
                                     </Grid>
 
-                                    {/* Percentage Completion */}
                                     <Grid item xs={12} md={6}>
                                         <TextField
                                             select
@@ -1278,26 +1320,25 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             onChange={(e) => handleChange('percentageCompletion', e.target.value)}
                                             fullWidth
                                             error={!!errors.percentageCompletion}
-                                            helperText={errors.percentageCompletion || 'Select from predefined values only'}
+                                            helperText={errors.percentageCompletion || 'Select completion percentage'}
                                             size="small"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#2e7d32' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#2e7d32' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         >
                                             {dropdownOptions.percentageCompletion?.map((percentage) => (
                                                 <MenuItem key={percentage} value={percentage}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                        <Typography sx={{ minWidth: 40 }}>{percentage}%</Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                                                        <Typography sx={{ minWidth: 40, fontWeight: 500 }}>{percentage}%</Typography>
                                                         <Box
                                                             sx={{
-                                                                ml: 1,
                                                                 flex: 1,
-                                                                height: 6,
-                                                                bgcolor: '#e0e0e0',
+                                                                height: 8,
+                                                                bgcolor: '#e2e8f0',
                                                                 borderRadius: 1,
                                                                 overflow: 'hidden'
                                                             }}
@@ -1306,7 +1347,8 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                                                 sx={{
                                                                     width: `${percentage}%`,
                                                                     height: '100%',
-                                                                    bgcolor: '#2e7d32'
+                                                                    bgcolor: '#1e40af',
+                                                                    transition: 'width 0.3s ease'
                                                                 }}
                                                             />
                                                         </Box>
@@ -1316,7 +1358,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                         </TextField>
                                     </Grid>
 
-                                    {/* Remarks */}
                                     <Grid item xs={12} md={6}>
                                         <TextField
                                             label="Remarks"
@@ -1324,117 +1365,137 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                                             onChange={(e) => handleChange('remarks', e.target.value)}
                                             fullWidth
                                             multiline
-                                            rows={2}
+                                            rows={3}
                                             size="small"
+                                            placeholder="Add any additional comments or notes"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    borderRadius: 2,
-                                                    '&:hover fieldset': { borderColor: '#2e7d32' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#2e7d32' }
+                                                    backgroundColor: '#f8fafc',
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
                                                 }
                                             }}
                                         />
                                     </Grid>
                                 </Grid>
-                                {/* Time Remaining Display */}
-                                <Grid item xs={12} md={6}>
-                                    <Card
+                            </Box>
+
+                            {/* Time Summary Card */}
+                            {dailyTimeSummary.isLoaded && (
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        p: 3,
+                                        backgroundColor: dailyTimeSummary.overTime > 0 ? '#fef3c7' : '#dbeafe',
+                                        border: `1px solid ${dailyTimeSummary.overTime > 0 ? '#f59e0b' : '#3b82f6'}`,
+                                        borderRadius: 2
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{
+                                        color: '#374151',
+                                        mb: 2,
+                                        fontWeight: 600
+                                    }}>
+                                        Daily Time Summary - {formData.date || 'Select date'}
+                                    </Typography>
+
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={6} md={3}>
+                                            <Box sx={{ textAlign: 'center' }}>
+                                                <Typography variant="h6" sx={{
+                                                    color: dailyTimeSummary.overTime > 0 ? '#f59e0b' : '#1e40af',
+                                                    fontWeight: 700
+                                                }}>
+                                                    {dailyTimeSummary.totalHours}h {dailyTimeSummary.totalMinutes}m
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                                    Used / 9h
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+
+                                        {dailyTimeSummary.remaining > 0 ? (
+                                            <Grid item xs={6} md={3}>
+                                                <Box sx={{ textAlign: 'center' }}>
+                                                    <Typography variant="h6" sx={{ color: '#059669', fontWeight: 700 }}>
+                                                        {Math.floor(dailyTimeSummary.remaining)}h {Math.round((dailyTimeSummary.remaining % 1) * 60)}m
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                                        Remaining
+                                                    </Typography>
+                                                </Box>
+                                            </Grid>
+                                        ) : (
+                                            <Grid item xs={6} md={3}>
+                                                <Box sx={{ textAlign: 'center' }}>
+                                                    <Typography variant="h6" sx={{ color: '#dc2626', fontWeight: 700 }}>
+                                                        +{Math.floor(dailyTimeSummary.overTime)}h {Math.round((dailyTimeSummary.overTime % 1) * 60)}m
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                                        Over Time
+                                                    </Typography>
+                                                </Box>
+                                            </Grid>
+                                        )}
+                                    </Grid>
+                                </Paper>
+                            )}
+
+                            <Divider sx={{ borderColor: '#e2e8f0' }} />
+
+                            {/* Action Buttons */}
+                            <Box sx={{
+                                display: 'flex',
+                                gap: 2,
+                                justifyContent: 'flex-end',
+                                pt: 2
+                            }}>
+                                {editTask && (
+                                    <Button
+                                        onClick={onCancel}
                                         variant="outlined"
+                                        size="large"
                                         sx={{
-                                            width: '22%',
-                                            mt: 5,
-                                            p: 1.5,
-                                            backgroundColor: dailyTimeSummary.overTime > 0 ? '#fff3e0' : '#f0f7ff',
-                                            border: dailyTimeSummary.overTime > 0 ? '1px solid #f57c00' : '1px solid #1976d2'
+                                            px: 4,
+                                            py: 1.5,
+                                            borderColor: '#d1d5db',
+                                            color: '#374151',
+                                            fontWeight: 500,
+                                            '&:hover': {
+                                                borderColor: '#9ca3af',
+                                                backgroundColor: '#f9fafb'
+                                            }
                                         }}
                                     >
-                                        <Typography variant="caption" sx={{ display: 'block', color: '#666', mb: 0.5 }}>
-                                            Daily Time Summary ({formData.date || 'Select date'})
-                                        </Typography>
-                                        {dailyTimeSummary.isLoaded ? (
-                                            <>
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        color: dailyTimeSummary.overTime > 0 ? '#f57c00' : '#1976d2'
-                                                    }}
-                                                >
-                                                    Used: {dailyTimeSummary.totalHours}h {dailyTimeSummary.totalMinutes}m / 9h
-                                                </Typography>
-                                                {dailyTimeSummary.remaining > 0 ? (
-                                                    <Typography variant="body2" sx={{ color: '#2e7d32' }}>
-                                                        Remaining: {Math.floor(dailyTimeSummary.remaining)}h {Math.round((dailyTimeSummary.remaining % 1) * 60)}m
-                                                    </Typography>
-                                                ) : (
-                                                    <Typography variant="body2" sx={{ color: '#f57c00' }}>
-                                                        Over Time: +{Math.floor(dailyTimeSummary.overTime)}h {Math.round((dailyTimeSummary.overTime % 1) * 60)}m
-                                                    </Typography>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <Typography variant="body2" sx={{ color: '#666' }}>
-                                                Loading time summary...
-                                            </Typography>
-                                        )}
-                                    </Card>
-                                </Grid>
-                            </CardContent>
-                        </Card>
-
-                        {/* Action Buttons */}
-                        <Box sx={{
-                            display: 'flex',
-                            gap: 2,
-                            justifyContent: 'flex-end',
-                            pt: 2,
-                            borderTop: '1px solid #e0e0e0'
-                        }}>
-                            {editTask && (
+                                        Cancel
+                                    </Button>
+                                )}
                                 <Button
-                                    onClick={onCancel}
-                                    variant="outlined"
+                                    type="submit"
+                                    variant="contained"
                                     size="large"
                                     sx={{
-                                        borderRadius: 2,
                                         px: 4,
-                                        py: 1,
-                                        borderColor: '#1976d2',
-                                        color: '#1976d2',
+                                        py: 1.5,
+                                        backgroundColor: '#1e40af',
+                                        fontWeight: 600,
+                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                         '&:hover': {
-                                            borderColor: '#1565c0',
-                                            backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                                            backgroundColor: '#1d4ed8',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                                        },
+                                        '&:active': {
+                                            transform: 'translateY(1px)'
                                         }
                                     }}
                                 >
-                                    Cancel
+                                    {editTask ? 'Update Task' : 'Create Task'}
                                 </Button>
-                            )}
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                size="large"
-                                sx={{
-                                    borderRadius: 2,
-                                    px: 4,
-                                    py: 1,
-                                    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                                    boxShadow: '0 4px 15px rgba(25, 118, 210, 0.3)',
-                                    fontWeight: 600,
-                                    '&:hover': {
-                                        background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
-                                        boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)',
-                                        transform: 'translateY(-2px)'
-                                    },
-                                    transition: 'all 0.2s ease'
-                                }}
-                            >
-                                {editTask ? 'Update Task' : 'Create Task'}
-                            </Button>
-                        </Box>
+                            </Box>
+                        </Stack>
                     </form>
-                </CardContent>
-            </Card>
+                </Box>
+            </Paper>
         </Box>
     );
 };
