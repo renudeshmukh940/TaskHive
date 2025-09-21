@@ -27,6 +27,10 @@ import AdminDashboard from '../components/adminDashboard';
 
 export default function Home() {
   const { userProfile, logout } = useAuth();
+  if (userProfile?.role === 'admin') {
+    console.log('Admin detected, redirecting to AdminDashboard');
+    return <AdminDashboard userProfile={userProfile} />;
+  }
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
@@ -90,10 +94,8 @@ export default function Home() {
     }
   };
 
-  if (userProfile?.role === 'admin') {
-    console.log('Admin detected, redirecting to AdminDashboard');
-    return <AdminDashboard userProfile={userProfile} />;
-  }
+
+  // Replace the applyClientSideFilters function in Home.js with this corrected version:
 
   const applyClientSideFilters = () => {
     if (tasks.length === 0) {
