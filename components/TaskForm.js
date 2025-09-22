@@ -1,13 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-    Paper, TextField, Button, Grid, Typography, MenuItem, Box, Card, CardContent,
-    Chip, InputAdornment, Alert, Divider, CardHeader, Avatar, Stack
-} from '@mui/material';
-import {
-    Person, Business, Assignment, DateRange, Schedule, Assessment,
-    AccessTime, TrendingUp, Work, Description, Group, AccountTree
-} from '@mui/icons-material';
-import {
     getTeamDropdownData,
     saveTeamDropdownData,
     getTeams,
@@ -56,7 +48,7 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
     const [errors, setErrors] = useState({});
     const [isTeamSelected, setIsTeamSelected] = useState(false);
     const [permissionAlert, setPermissionAlert] = useState('');
-    const [dailyTasksState, setDailyTasksState] = useState([]);
+    const [refreshKey, setRefreshKey] = useState(0);
     const [dailyTimeSummary, setDailyTimeSummary] = useState({
         totalUsed: 0,
         totalHours: 0,
@@ -83,7 +75,7 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         if (formData.date && formData.empId && formData.teamName) {
             loadDailyTimeSummary();
         }
-    }, [formData.date, formData.empId, formData.teamName, dailyTasksState, editTask]);
+    }, [formData.date, formData.empId, formData.teamName, editTask, refreshKey]);
 
     const [dailyHoursTracking, setDailyHoursTracking] = useState({
         normalHours: 0,
@@ -93,9 +85,9 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
     const [timeValidationMessage, setTimeValidationMessage] = useState('');
     const [validationTrigger, setValidationTrigger] = useState(0);
 
+
     const initializeUserData = async () => {
         try {
-            // Auto-fill based on role — NO CHOICES FOR ANYONE
             let teamName = '';
             let empId = userProfile.empId || '';
             let empName = userProfile.empName || '';
@@ -126,7 +118,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 workType: ''
             });
 
-            // Load team data ONLY if teamName is valid and accessible
             if (teamName && canUserAccessTeam(userProfile, teamName)) {
                 await loadTeamData(teamName);
                 setIsTeamSelected(true);
@@ -134,7 +125,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 setIsTeamSelected(false);
             }
 
-            // Hide all team selection UI — no dropdowns, no inputs
             setAccessibleTeams([]);
             setAllTeams([]);
 
@@ -162,15 +152,12 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
 
             setDropdownOptions(options);
 
-            // Load team projects
             const projectsData = await getTeamProjects(teamName, userProfile);
             setProjects(projectsData);
 
-            // Load team employees
             const employeesData = await getTeamEmployees(teamName, userProfile);
             setEmployees(employeesData);
 
-            // Load team clients
             const clientsData = await getTeamClients(teamName, userProfile);
             setClients(clientsData);
 
@@ -193,7 +180,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             setEmployees(updatedEmployees);
             setClients(updatedClients);
 
-            // Refresh all teams list if user is manager/admin
             if (userProfile.role === 'manager' || userProfile.role === 'admin') {
                 const allTeamsData = await getTeams();
                 setAllTeams(allTeamsData);
@@ -217,7 +203,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         const minutes = parseInt(match[2], 10);
         const currentTaskHours = hours + minutes / 60;
 
-        // Get existing tasks for daily tracking FIRST
         let existingTasks = [];
         try {
             existingTasks = await getTasksForEmployee(formData.teamName, formData.empId, formData.date) || [];
@@ -225,10 +210,8 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             existingTasks = [];
         }
 
-        const dailyTasks = dailyTasksState || [];
         let totalDailyHours = 0;
 
-        // Calculate existing backend tasks (EXCLUDE current task being edited)
         existingTasks.forEach(task => {
             if (isEdit && task.id === editTaskId) return;
 
@@ -241,23 +224,8 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             }
         });
 
-        // Add frontend unsaved tasks (only for new tasks, not for edit)
-        if (!isEdit) {
-            dailyTasks.forEach(task => {
-                const match = task.timeSpent?.match(timePattern);
-                if (match) {
-                    const h = parseInt(match[1], 10);
-                    const m = parseInt(match[2], 10);
-                    const taskHours = h + m / 60;
-                    totalDailyHours += taskHours;
-                }
-            });
-        }
-
-        // Calculate what the total will be with current task
         const projectedDailyTotal = totalDailyHours + currentTaskHours;
 
-        // Determine required hours based on work type - UPDATED LOGIC
         let minHours = 0;
         let maxHours = null;
 
@@ -275,7 +243,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 maxHours = 7;
                 break;
             case "over time":
-                // For Over Time: Check if projected daily total will be >= 9
                 if (projectedDailyTotal < 9) {
                     const shortfall = 9 - projectedDailyTotal;
                     const shortHours = Math.floor(shortfall);
@@ -284,12 +251,11 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                     setTimeValidationMessage(errorMsg);
                     return errorMsg;
                 }
-                minHours = 0; // Individual task can be any amount
-                maxHours = null; // No upper limit
+                minHours = 0;
+                maxHours = null;
                 break;
         }
 
-        // Validate individual task time against work type requirements (for non-overtime)
         if (workType.toLowerCase() !== "over time") {
             if (currentTaskHours < minHours) {
                 const diff = minHours - currentTaskHours;
@@ -310,7 +276,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             }
         }
 
-        // Calculate normal vs extra hours distribution
         let normalHours = 0;
         let extraHours = 0;
 
@@ -322,14 +287,12 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             extraHours = projectedDailyTotal - 9;
         }
 
-        // Update tracking state
         setDailyHoursTracking({
             normalHours: normalHours,
             extraHours: extraHours,
             totalHours: projectedDailyTotal
         });
 
-        // Generate validation message
         let message = '';
         if (isEdit) {
             message = `[EDIT MODE] `;
@@ -339,7 +302,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             const extraHoursInt = Math.floor(extraHours);
             const extraMinutes = Math.round((extraHours - extraHoursInt) * 60);
 
-            // Check if daily total exceeds 9 hours and it's not "Over Time"
             if (workType.toLowerCase() !== "over time") {
                 message += `Daily limit exceeded! ${normalHours}h normal + ${extraHoursInt}:${extraMinutes.toString().padStart(2, '0')} extra. Use "Over Time" work type for extra hours.`;
                 setTimeValidationMessage(message);
@@ -366,7 +328,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         setFormData(prev => {
             const newData = { ...prev, [field]: value };
 
-            // Auto-fill project name when project ID is selected
             if (field === 'projectId' && value) {
                 const selectedProject = projects.find(p => p.id === value);
                 if (selectedProject) {
@@ -374,7 +335,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 }
             }
 
-            // Auto-fill project ID when project name is selected
             if (field === 'projectName' && value) {
                 const selectedProject = projects.find(p => p.name === value);
                 if (selectedProject) {
@@ -382,7 +342,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 }
             }
 
-            // Auto-fill employee name when emp ID is selected
             if (field === 'empId' && value) {
                 const selectedEmployee = employees.find(e => e.id === value);
                 if (selectedEmployee) {
@@ -390,7 +349,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 }
             }
 
-            // Auto-fill emp ID when employee name is selected
             if (field === 'empName' && value) {
                 const selectedEmployee = employees.find(e => e.name === value);
                 if (selectedEmployee) {
@@ -398,7 +356,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 }
             }
 
-            // Auto-fill client name when client ID is selected
             if (field === 'clientId' && value) {
                 const selectedClient = clients.find(c => c.id === value);
                 if (selectedClient) {
@@ -406,13 +363,13 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 }
             }
 
-            // Auto-fill client ID when client name is selected
             if (field === 'clientName' && value) {
                 const selectedClient = clients.find(c => c.name === value);
                 if (selectedClient) {
                     newData.clientId = selectedClient.id;
                 }
             }
+
             if (field === "workType" && value && !newData.timeSpent) {
                 switch (value) {
                     case "Full-day": newData.timeSpent = "9:00"; break;
@@ -431,7 +388,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             const workTypeValue = field === 'workType' ? value : formData.workType;
 
             if (timeSpentValue && workTypeValue) {
-                // Trigger validation after state update
                 setValidationTrigger(prev => prev + 1);
             }
         }
@@ -460,12 +416,10 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
 
         try {
             const existingTasks = await getTasksForEmployee(formData.teamName, formData.empId, formData.date) || [];
-            const dailyTasks = dailyTasksState || [];
 
-            let totalMinutes = 0; // Use minutes for accurate calculation
+            let totalMinutes = 0;
             const timePattern = /^(\d{1,2}):(\d{2})$/;
 
-            // Calculate existing backend tasks (exclude current task if editing)
             existingTasks.forEach(task => {
                 if (editTask && task.id === editTask.id) return;
 
@@ -473,35 +427,21 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 if (match) {
                     const h = parseInt(match[1], 10);
                     const m = parseInt(match[2], 10);
-                    totalMinutes += (h * 60) + m; // Convert to total minutes
+                    totalMinutes += (h * 60) + m;
                 }
             });
 
-            // Add frontend unsaved tasks (only for new tasks, not for edit)
-            if (!editTask) {
-                dailyTasks.forEach(task => {
-                    const match = task.timeSpent?.match(timePattern);
-                    if (match) {
-                        const h = parseInt(match[1], 10);
-                        const m = parseInt(match[2], 10);
-                        totalMinutes += (h * 60) + m; // Convert to total minutes
-                    }
-                });
-            }
-
-            // Convert total minutes back to hours and minutes
             const totalHours = Math.floor(totalMinutes / 60);
             const remainingMinutes = totalMinutes % 60;
-            const totalDecimalHours = totalMinutes / 60; // For calculations
+            const totalDecimalHours = totalMinutes / 60;
 
-            // Calculate remaining/overtime using minutes for precision
             let remaining = 0;
             let overTime = 0;
 
-            if (totalMinutes <= 540) { // 540 minutes = 9 hours
-                remaining = (540 - totalMinutes) / 60; // Convert back to hours
+            if (totalMinutes <= 540) {
+                remaining = (540 - totalMinutes) / 60;
             } else {
-                overTime = (totalMinutes - 540) / 60; // Convert back to hours
+                overTime = (totalMinutes - 540) / 60;
             }
 
             setDailyTimeSummary({
@@ -561,7 +501,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
             }
         });
 
-        // Employee role validation - can only create tasks for themselves
         if (userProfile?.role === 'employee') {
             if (formData.teamName !== userProfile.teamName) {
                 newErrors.teamName = 'You can only create tasks for your own team';
@@ -578,7 +517,7 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         if (formData.timeSpent && !/^\d{1,2}:\d{2}$/.test(formData.timeSpent)) {
             newErrors.timeSpent = 'Time format should be HH:MM';
         }
-        // Validate predefined fields
+
         const predefinedFields = ['status', 'percentageCompletion', 'workType'];
         predefinedFields.forEach(field => {
             if (formData[field] && isPredefinedField(field)) {
@@ -644,7 +583,6 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 throw new Error('Team name is required');
             }
 
-            // Validate time tracking before submission and block if invalid
             const timeValidationError = await validateTimeForWorkType(
                 formData.workType,
                 formData.timeSpent,
@@ -654,10 +592,9 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
 
             if (timeValidationError) {
                 alert(timeValidationError);
-                return; // Block submission
+                return;
             }
 
-            // Create task data with time tracking info
             const taskDataWithTimeTracking = {
                 ...formData,
                 normalHours: dailyHoursTracking.normalHours,
@@ -683,10 +620,8 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                 );
             } else {
                 await addTask(taskDataWithTimeTracking, userProfile);
-                setDailyTasksState(prev => [...prev, taskDataWithTimeTracking]);
             }
 
-            // Rest remains the same...
             await refreshTeamData(formData.teamName);
             onSubmit(formData);
 
@@ -701,6 +636,7 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
                     setEmployees([]);
                     setClients([]);
                 }
+                setRefreshKey(prev => prev + 1);
             } else {
                 onCancel();
             }
@@ -710,793 +646,498 @@ const TaskForm = ({ onSubmit, editTask, onCancel, userProfile }) => {
         }
     };
 
-
-
     return (
-        <Box sx={{
-            backgroundColor: '#f8fafc',
-            minHeight: '100vh',
-            py: 3,
-            px: 2
-        }}>
-            <Paper
-                elevation={0}
-                sx={{
-                    maxWidth: 1200,
-                    mx: 'auto',
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 2,
-                    overflow: 'hidden'
-                }}
-            >
-                <Box sx={{
-                    backgroundColor: '#1e40af',
-                    color: 'white',
-                    px: 4,
-                    py: 3,
-                    borderBottom: '1px solid #e2e8f0'
-                }}>
-                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                        {editTask ? 'Edit Task' : 'Create New Task'}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                        Fill in the details below to {editTask ? 'update' : 'create'} your task
-                    </Typography>
-                </Box>
+        <div className="min-h-screen bg-gray-50">
+            <div className="max-w-full mx-auto p-2">
+                {/* Permission Alert */}
+                {permissionAlert && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-center">
+                            <svg className="w-5 h-5 text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-yellow-800">{permissionAlert}</span>
+                        </div>
+                    </div>
+                )}
 
-                <Box sx={{ p: 4 }}>
-                    {permissionAlert && (
-                        <Alert
-                            severity="warning"
-                            sx={{
-                                mb: 3,
-                                borderRadius: 1,
-                                '& .MuiAlert-icon': { color: '#f59e0b' },
-                                backgroundColor: '#fef3c7',
-                                borderLeft: '4px solid #f59e0b'
-                            }}
-                        >
-                            {permissionAlert}
-                        </Alert>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Basic & Employee Info */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Basic Information */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a1 1 0 01-1 1H5a1 1 0 01-1-1V8a1 1 0 011-1h3z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                    <input
+                                        type="date"
+                                        value={formData.date}
+                                        onChange={(e) => handleChange('date', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+                                    <input
+                                        type="text"
+                                        value={formData.teamName === 'techLeads' ? 'Tech Lead (Personal)' : formData.teamName || 'N/A'}
+                                        disabled
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {formData.teamName === 'techLeads' ? 'Your personal/administrative tasks' : 'Assigned team'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Employee Information */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900">Employee Information</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                                    <input
+                                        type="text"
+                                        value={formData.empId}
+                                        disabled
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Your employee ID</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.empName}
+                                        disabled
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Your name</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Team Selection Notice */}
+                    {!formData.teamName?.trim() && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-center">
+                                <svg className="w-5 h-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-blue-800">Please enter a team name to access team-specific options.</span>
+                            </div>
+                        </div>
                     )}
 
-                    <form onSubmit={handleSubmit}>
-                        <Stack spacing={4}>
-                            {/* Basic Information Section */}
-                            <Box>
-                                <Typography variant="h6" sx={{
-                                    color: '#1e40af',
-                                    fontWeight: 600,
-                                    mb: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1
-                                }}>
-                                    <DateRange sx={{ fontSize: 20 }} />
-                                    Basic Information
-                                </Typography>
+                    {/* Client & Project Information */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center mb-6">
+                            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center mr-3">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">Client & Project Information</h3>
+                        </div>
 
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="Date"
-                                            type="date"
-                                            value={formData.date}
-                                            onChange={(e) => handleChange('date', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            InputLabelProps={{ shrink: true }}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {/* Client ID & Name */}
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                                    <select
+                                        value={formData.clientId}
+                                        onChange={(e) => handleChange('clientId', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select Client ID</option>
+                                        {clients.map((client) => (
+                                            <option key={client.id} value={client.id}>
+                                                {client.id}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        placeholder="Or enter new Client ID"
+                                        value={formData.clientId}
+                                        onChange={(e) => handleChange('clientId', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="Team"
-                                            value={
-                                                formData.teamName === 'techLeads'
-                                                    ? 'Tech Lead (Personal)'
-                                                    : formData.teamName || 'N/A'
-                                            }
-                                            fullWidth
-                                            size="small"
-                                            disabled
-                                            helperText={
-                                                formData.teamName === 'techLeads'
-                                                    ? 'Your personal/administrative tasks'
-                                                    : 'Your assigned team'
-                                            }
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f1f5f9',
-                                                    '&.Mui-disabled': {
-                                                        backgroundColor: '#f1f5f9'
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
+                                    <select
+                                        value={formData.clientName}
+                                        onChange={(e) => handleChange('clientName', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select Client Name</option>
+                                        {clients.map((client) => (
+                                            <option key={client.name} value={client.name}>
+                                                {client.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        placeholder="Or enter new Client Name"
+                                        value={formData.clientName}
+                                        onChange={(e) => handleChange('clientName', e.target.value)}
+                                        onBlur={() => handleClientSave(formData.clientId, formData.clientName)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="Employee ID"
-                                            value={formData.empId}
-                                            fullWidth
-                                            size="small"
-                                            disabled
-                                            helperText="Your employee ID"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f1f5f9',
-                                                    '&.Mui-disabled': {
-                                                        backgroundColor: '#f1f5f9'
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
+                            {/* Project ID & Name */}
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Project ID</label>
+                                    <select
+                                        value={formData.projectId}
+                                        onChange={(e) => handleChange('projectId', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select Project ID</option>
+                                        {projects.map((project) => (
+                                            <option key={project.id} value={project.id}>
+                                                {project.id}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        placeholder="Or enter new Project ID"
+                                        value={formData.projectId}
+                                        onChange={(e) => handleChange('projectId', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="Employee Name"
-                                            value={formData.empName}
-                                            fullWidth
-                                            size="small"
-                                            disabled
-                                            helperText="Your name"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f1f5f9',
-                                                    '&.Mui-disabled': {
-                                                        backgroundColor: '#f1f5f9'
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                </Grid>
-                            </Box>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                                    <select
+                                        value={formData.projectName}
+                                        onChange={(e) => handleChange('projectName', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select Project Name</option>
+                                        {projects.map((project) => (
+                                            <option key={project.name} value={project.name}>
+                                                {project.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        placeholder="Or enter new Project Name"
+                                        value={formData.projectName}
+                                        onChange={(e) => handleChange('projectName', e.target.value)}
+                                        onBlur={() => handleProjectSave(formData.projectId, formData.projectName)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
 
-                            <Divider sx={{ borderColor: '#e2e8f0' }} />
+                            {/* Phase */}
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phase</label>
+                                    <input
+                                        type="text"
+                                        value={formData.phase}
+                                        onChange={(e) => handleChange('phase', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Enter project phase"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                            {/* Client & Project Section */}
-                            <Box>
-                                <Typography variant="h6" sx={{
-                                    color: '#1e40af',
-                                    fontWeight: 600,
-                                    mb: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1
-                                }}>
-                                    <AccountTree sx={{ fontSize: 20 }} />
-                                    Client & Project Information
-                                </Typography>
+                    {/* Task Details */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center mb-6">
+                            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">Task Details</h3>
+                        </div>
 
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ mb: 2 }}>
-                                            <Typography variant="body2" sx={{
-                                                mb: 1,
-                                                fontWeight: 500,
-                                                color: '#475569'
-                                            }}>
-                                                Client ID
-                                            </Typography>
-                                            <TextField
-                                                select
-                                                value={formData.clientId}
-                                                onChange={(e) => handleChange('clientId', e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                placeholder="Select existing client ID"
-                                                sx={{
-                                                    mb: 1,
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            >
-                                                {clients.map((client) => (
-                                                    <MenuItem key={client.id} value={client.id}>
-                                                        {client.id}
-                                                    </MenuItem>
-                                                ))}
-                                            </TextField>
-                                            <TextField
-                                                placeholder="Or enter new Client ID"
-                                                value={formData.clientId}
-                                                onChange={(e) => handleChange('clientId', e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            />
-                                        </Box>
-                                    </Grid>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Task Description *</label>
+                                <textarea
+                                    value={formData.taskDescription}
+                                    onChange={(e) => handleChange('taskDescription', e.target.value)}
+                                    rows={4}
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.taskDescription ? 'border-red-500' : 'border-gray-300'}`}
+                                    placeholder="Describe the task in detail..."
+                                />
+                                {errors.taskDescription && (
+                                    <p className="text-red-500 text-sm mt-1">{errors.taskDescription}</p>
+                                )}
+                            </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ mb: 2 }}>
-                                            <Typography variant="body2" sx={{
-                                                mb: 1,
-                                                fontWeight: 500,
-                                                color: '#475569'
-                                            }}>
-                                                Client Name
-                                            </Typography>
-                                            <TextField
-                                                select
-                                                value={formData.clientName}
-                                                onChange={(e) => handleChange('clientName', e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                placeholder="Select existing client name"
-                                                sx={{
-                                                    mb: 1,
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            >
-                                                {clients.map((client) => (
-                                                    <MenuItem key={client.name} value={client.name}>
-                                                        {client.name}
-                                                    </MenuItem>
-                                                ))}
-                                            </TextField>
-                                            <TextField
-                                                placeholder="Or enter new Client Name"
-                                                value={formData.clientName}
-                                                onChange={(e) => handleChange('clientName', e.target.value)}
-                                                onBlur={() => handleClientSave(formData.clientId, formData.clientName)}
-                                                fullWidth
-                                                size="small"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            />
-                                        </Box>
-                                    </Grid>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                                <input
+                                    type="date"
+                                    value={formData.startDate}
+                                    onChange={(e) => handleChange('startDate', e.target.value)}
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.startDate ? 'border-red-500' : 'border-gray-300'}`}
+                                />
+                                {errors.startDate && (
+                                    <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
+                                )}
+                            </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ mb: 2 }}>
-                                            <Typography variant="body2" sx={{
-                                                mb: 1,
-                                                fontWeight: 500,
-                                                color: '#475569'
-                                            }}>
-                                                Project ID
-                                            </Typography>
-                                            <TextField
-                                                select
-                                                value={formData.projectId}
-                                                onChange={(e) => handleChange('projectId', e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                placeholder="Select existing project ID"
-                                                sx={{
-                                                    mb: 1,
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            >
-                                                {projects.map((project) => (
-                                                    <MenuItem key={project.id} value={project.id}>
-                                                        {project.id}
-                                                    </MenuItem>
-                                                ))}
-                                            </TextField>
-                                            <TextField
-                                                placeholder="Or enter new Project ID"
-                                                value={formData.projectId}
-                                                onChange={(e) => handleChange('projectId', e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            />
-                                        </Box>
-                                    </Grid>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+                                <input
+                                    type="date"
+                                    value={formData.endDate}
+                                    onChange={(e) => handleChange('endDate', e.target.value)}
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.endDate ? 'border-red-500' : 'border-gray-300'}`}
+                                />
+                                {errors.endDate && (
+                                    <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ mb: 2 }}>
-                                            <Typography variant="body2" sx={{
-                                                mb: 1,
-                                                fontWeight: 500,
-                                                color: '#475569'
-                                            }}>
-                                                Project Name
-                                            </Typography>
-                                            <TextField
-                                                select
-                                                value={formData.projectName}
-                                                onChange={(e) => handleChange('projectName', e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                placeholder="Select existing project name"
-                                                sx={{
-                                                    mb: 1,
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            >
-                                                {projects.map((project) => (
-                                                    <MenuItem key={project.name} value={project.name}>
-                                                        {project.name}
-                                                    </MenuItem>
-                                                ))}
-                                            </TextField>
-                                            <TextField
-                                                placeholder="Or enter new Project Name"
-                                                value={formData.projectName}
-                                                onChange={(e) => handleChange('projectName', e.target.value)}
-                                                onBlur={() => handleProjectSave(formData.projectId, formData.projectName)}
-                                                fullWidth
-                                                size="small"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        backgroundColor: '#f8fafc',
-                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                    }
-                                                }}
-                                            />
-                                        </Box>
-                                    </Grid>
+                    {/* Status & Progress */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        {/* Status & Time Tracking */}
+                        <div className="lg:col-span-3 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center mb-6">
+                                <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900">Status & Progress</h3>
+                            </div>
 
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            label="Phase"
-                                            value={formData.phase}
-                                            onChange={(e) => handleChange('phase', e.target.value)}
-                                            fullWidth
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                </Grid>
-                            </Box>
-
-                            <Divider sx={{ borderColor: '#e2e8f0' }} />
-
-                            {/* Task Details Section */}
-                            <Box>
-                                <Typography variant="h6" sx={{
-                                    color: '#1e40af',
-                                    fontWeight: 600,
-                                    mb: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1
-                                }}>
-                                    <Description sx={{ fontSize: 20 }} />
-                                    Task Details
-                                </Typography>
-
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            label="Task Description"
-                                            value={formData.taskDescription}
-                                            onChange={(e) => handleChange('taskDescription', e.target.value)}
-                                            fullWidth
-                                            multiline
-                                            rows={4}
-                                            required
-                                            error={!!errors.taskDescription}
-                                            helperText={errors.taskDescription || "Provide detailed description of the task"}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="Start Date"
-                                            type="date"
-                                            value={formData.startDate}
-                                            onChange={(e) => handleChange('startDate', e.target.value)}
-                                            fullWidth
-                                            required
-                                            error={!!errors.startDate}
-                                            helperText={errors.startDate}
-                                            InputLabelProps={{ shrink: true }}
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="End Date"
-                                            type="date"
-                                            value={formData.endDate}
-                                            onChange={(e) => handleChange('endDate', e.target.value)}
-                                            fullWidth
-                                            required
-                                            error={!!errors.endDate}
-                                            helperText={errors.endDate}
-                                            InputLabelProps={{ shrink: true }}
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                </Grid>
-                            </Box>
-
-                            <Divider sx={{ borderColor: '#e2e8f0' }} />
-
-                            {/* Status & Progress Section */}
-                            <Box>
-                                <Typography variant="h6" sx={{
-                                    color: '#1e40af',
-                                    fontWeight: 600,
-                                    mb: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1
-                                }}>
-                                    <TrendingUp sx={{ fontSize: 20 }} />
-                                    Status & Progress
-                                </Typography>
-
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} md={4}>
-                                        <TextField
-                                            label="Time Spent (HH:MM)"
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Time Spent (HH:MM)</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type="text"
                                             value={formData.timeSpent}
                                             onChange={(e) => handleChange('timeSpent', e.target.value)}
-                                            fullWidth
                                             placeholder="08:30"
-                                            error={!!errors.timeSpent}
-                                            helperText={errors.timeSpent || timeValidationMessage || "Format: HH:MM (e.g., 08:30)"}
-                                            size="small"
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <AccessTime sx={{ color: '#64748b', fontSize: 20 }} />
-                                                    </InputAdornment>
-                                                ),
-                                            }}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                },
-                                                '& .MuiFormHelperText-root': {
-                                                    color: errors.timeSpent
-                                                        ? '#dc2626'
-                                                        : dailyHoursTracking.extraHours > 0 && formData.workType?.toLowerCase() !== 'over time'
-                                                            ? '#f59e0b'
-                                                            : dailyHoursTracking.extraHours > 0
-                                                                ? '#059669'
-                                                                : '#64748b',
-                                                    fontWeight: dailyHoursTracking.extraHours > 0 ? 500 : 400
-                                                }
-                                            }}
+                                            className={`w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.timeSpent ? 'border-red-500' : 'border-gray-300'}`}
                                         />
-                                    </Grid>
+                                    </div>
+                                    {(errors.timeSpent || timeValidationMessage) && (
+                                        <p className={`text-sm mt-1 ${errors.timeSpent ? 'text-red-500' :
+                                            dailyHoursTracking.extraHours > 0 && formData.workType?.toLowerCase() !== 'over time' ? 'text-orange-600' :
+                                                dailyHoursTracking.extraHours > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                                            {errors.timeSpent || timeValidationMessage}
+                                        </p>
+                                    )}
+                                </div>
 
-                                    <Grid item xs={12} md={4}>
-                                        <TextField
-                                            select
-                                            label="Status"
-                                            value={formData.status}
-                                            onChange={(e) => handleChange('status', e.target.value)}
-                                            fullWidth
-                                            required
-                                            error={!!errors.status}
-                                            helperText={errors.status || "Select task status"}
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        >
-                                            {dropdownOptions.status?.map((status) => (
-                                                <MenuItem key={status} value={status}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Box
-                                                            sx={{
-                                                                width: 8,
-                                                                height: 8,
-                                                                borderRadius: '50%',
-                                                                backgroundColor:
-                                                                    status === 'Completed' ? '#059669' :
-                                                                        status === 'In Progress' ? '#3b82f6' : '#f59e0b'
-                                                            }}
-                                                        />
-                                                        {status}
-                                                    </Box>
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                    </Grid>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => handleChange('status', e.target.value)}
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.status ? 'border-red-500' : 'border-gray-300'}`}
+                                    >
+                                        <option value="">Select Status</option>
+                                        {dropdownOptions.status?.map((status) => (
+                                            <option key={status} value={status}>
+                                                {status}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.status && (
+                                        <p className="text-red-500 text-sm mt-1">{errors.status}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-1">Select from predefined values only</p>
+                                </div>
 
-                                    <Grid item xs={12} md={4}>
-                                        <TextField
-                                            select
-                                            label="Work Type"
-                                            value={formData.workType}
-                                            onChange={(e) => handleChange('workType', e.target.value)}
-                                            fullWidth
-                                            required
-                                            error={!!errors.workType}
-                                            helperText={errors.workType || "Select work type"}
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        >
-                                            {dropdownOptions.workType?.map((workType) => (
-                                                <MenuItem key={workType} value={workType}>
-                                                    <Chip
-                                                        label={workType}
-                                                        size="small"
-                                                        variant="outlined"
-                                                        sx={{
-                                                            borderColor:
-                                                                workType === 'Full-day' ? '#059669' :
-                                                                    workType === 'Half-day' ? '#3b82f6' :
-                                                                        workType === 'Over Time' ? '#dc2626' : '#64748b',
-                                                            color:
-                                                                workType === 'Full-day' ? '#059669' :
-                                                                    workType === 'Half-day' ? '#3b82f6' :
-                                                                        workType === 'Over Time' ? '#dc2626' : '#64748b'
-                                                        }}
-                                                    />
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                    </Grid>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Work Type *</label>
+                                    <select
+                                        value={formData.workType}
+                                        onChange={(e) => handleChange('workType', e.target.value)}
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.workType ? 'border-red-500' : 'border-gray-300'}`}
+                                    >
+                                        <option value="">Select Work Type</option>
+                                        {dropdownOptions.workType?.map((workType) => (
+                                            <option key={workType} value={workType}>
+                                                {workType}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.workType && (
+                                        <p className="text-red-500 text-sm mt-1">{errors.workType}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-1">Select from predefined values only</p>
+                                </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            select
-                                            label="Percentage Completion"
-                                            value={formData.percentageCompletion}
-                                            onChange={(e) => handleChange('percentageCompletion', e.target.value)}
-                                            fullWidth
-                                            error={!!errors.percentageCompletion}
-                                            helperText={errors.percentageCompletion || 'Select completion percentage'}
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        >
-                                            {dropdownOptions.percentageCompletion?.map((percentage) => (
-                                                <MenuItem key={percentage} value={percentage}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
-                                                        <Typography sx={{ minWidth: 40, fontWeight: 500 }}>{percentage}%</Typography>
-                                                        <Box
-                                                            sx={{
-                                                                flex: 1,
-                                                                height: 8,
-                                                                bgcolor: '#e2e8f0',
-                                                                borderRadius: 1,
-                                                                overflow: 'hidden'
-                                                            }}
-                                                        >
-                                                            <Box
-                                                                sx={{
-                                                                    width: `${percentage}%`,
-                                                                    height: '100%',
-                                                                    bgcolor: '#1e40af',
-                                                                    transition: 'width 0.3s ease'
-                                                                }}
-                                                            />
-                                                        </Box>
-                                                    </Box>
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                    </Grid>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Percentage Completion</label>
+                                    <select
+                                        value={formData.percentageCompletion}
+                                        onChange={(e) => handleChange('percentageCompletion', e.target.value)}
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.percentageCompletion ? 'border-red-500' : 'border-gray-300'}`}
+                                    >
+                                        <option value="">Select Completion %</option>
+                                        {dropdownOptions.percentageCompletion?.map((percentage) => (
+                                            <option key={percentage} value={percentage}>
+                                                {percentage}%
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.percentageCompletion && (
+                                        <p className="text-red-500 text-sm mt-1">{errors.percentageCompletion}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-1">Select from predefined values only</p>
+                                </div>
 
-                                    <Grid item xs={12} md={6}>
-                                        <TextField
-                                            label="Remarks"
-                                            value={formData.remarks}
-                                            onChange={(e) => handleChange('remarks', e.target.value)}
-                                            fullWidth
-                                            multiline
-                                            rows={3}
-                                            size="small"
-                                            placeholder="Add any additional comments or notes"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: '#f8fafc',
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#1e40af', borderWidth: 2 }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                </Grid>
-                            </Box>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+                                    <textarea
+                                        value={formData.remarks}
+                                        onChange={(e) => handleChange('remarks', e.target.value)}
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Additional notes or remarks..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
-                            {/* Time Summary Card */}
-                            {dailyTimeSummary.isLoaded && (
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        p: 3,
-                                        backgroundColor: dailyTimeSummary.overTime > 0 ? '#fef3c7' : '#dbeafe',
-                                        border: `1px solid ${dailyTimeSummary.overTime > 0 ? '#f59e0b' : '#3b82f6'}`,
-                                        borderRadius: 2
-                                    }}
-                                >
-                                    <Typography variant="subtitle2" sx={{
-                                        color: '#374151',
-                                        mb: 2,
-                                        fontWeight: 600
-                                    }}>
-                                        Daily Time Summary - {formData.date || 'Select date'}
-                                    </Typography>
+                        {/* Daily Time Summary */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-2">
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                </div>
+                                <h4 className="text-sm font-semibold text-gray-900">Daily Summary</h4>
+                            </div>
 
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={6} md={3}>
-                                            <Box sx={{ textAlign: 'center' }}>
-                                                <Typography variant="h6" sx={{
-                                                    color: dailyTimeSummary.overTime > 0 ? '#f59e0b' : '#1e40af',
-                                                    fontWeight: 700
-                                                }}>
+                            <div className="space-y-3">
+                                <div className="text-xs text-gray-500">
+                                    {formData.date || 'Select date'}
+                                </div>
+
+                                {dailyTimeSummary.isLoaded ? (
+                                    <>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Used:</span>
+                                                <span className="text-sm font-medium text-gray-900">
                                                     {dailyTimeSummary.totalHours}h {dailyTimeSummary.totalMinutes}m
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                                    Used / 9h
-                                                </Typography>
-                                            </Box>
-                                        </Grid>
+                                                </span>
+                                            </div>
+
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className={`h-2 rounded-full ${dailyTimeSummary.overTime > 0 ? 'bg-orange-500' : 'bg-blue-500'}`}
+                                                    style={{ width: `${Math.min((dailyTimeSummary.totalUsed / 9) * 100, 100)}%` }}
+                                                ></div>
+                                            </div>
+
+                                            <div className="text-xs text-center text-gray-500">
+                                                / 9h standard
+                                            </div>
+                                        </div>
 
                                         {dailyTimeSummary.remaining > 0 ? (
-                                            <Grid item xs={6} md={3}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h6" sx={{ color: '#059669', fontWeight: 700 }}>
-                                                        {Math.floor(dailyTimeSummary.remaining)}h {Math.round((dailyTimeSummary.remaining % 1) * 60)}m
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                                        Remaining
-                                                    </Typography>
-                                                </Box>
-                                            </Grid>
+                                            <div className="bg-green-50 rounded-lg p-3">
+                                                <div className="text-xs font-medium text-green-800">Remaining</div>
+                                                <div className="text-sm font-semibold text-green-900">
+                                                    {Math.floor(dailyTimeSummary.remaining)}h {Math.round((dailyTimeSummary.remaining % 1) * 60)}m
+                                                </div>
+                                            </div>
                                         ) : (
-                                            <Grid item xs={6} md={3}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h6" sx={{ color: '#dc2626', fontWeight: 700 }}>
-                                                        +{Math.floor(dailyTimeSummary.overTime)}h {Math.round((dailyTimeSummary.overTime % 1) * 60)}m
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                                        Over Time
-                                                    </Typography>
-                                                </Box>
-                                            </Grid>
+                                            <div className="bg-orange-50 rounded-lg p-3">
+                                                <div className="text-xs font-medium text-orange-800">Over Time</div>
+                                                <div className="text-sm font-semibold text-orange-900">
+                                                    +{Math.floor(dailyTimeSummary.overTime)}h {Math.round((dailyTimeSummary.overTime % 1) * 60)}m
+                                                </div>
+                                            </div>
                                         )}
-                                    </Grid>
-                                </Paper>
-                            )}
-
-                            <Divider sx={{ borderColor: '#e2e8f0' }} />
-
-                            {/* Action Buttons */}
-                            <Box sx={{
-                                display: 'flex',
-                                gap: 2,
-                                justifyContent: 'flex-end',
-                                pt: 2
-                            }}>
-                                {editTask && (
-                                    <Button
-                                        onClick={onCancel}
-                                        variant="outlined"
-                                        size="large"
-                                        sx={{
-                                            px: 4,
-                                            py: 1.5,
-                                            borderColor: '#d1d5db',
-                                            color: '#374151',
-                                            fontWeight: 500,
-                                            '&:hover': {
-                                                borderColor: '#9ca3af',
-                                                backgroundColor: '#f9fafb'
-                                            }
-                                        }}
-                                    >
-                                        Cancel
-                                    </Button>
+                                    </>
+                                ) : (
+                                    <div className="text-sm text-gray-500">
+                                        Loading summary...
+                                    </div>
                                 )}
-                                <Button
-                                    type="submit"
-                                    variant="contained"
-                                    size="large"
-                                    sx={{
-                                        px: 4,
-                                        py: 1.5,
-                                        backgroundColor: '#1e40af',
-                                        fontWeight: 600,
-                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                        '&:hover': {
-                                            backgroundColor: '#1d4ed8',
-                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                                        },
-                                        '&:active': {
-                                            transform: 'translateY(1px)'
-                                        }
-                                    }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex justify-end space-x-4">
+                            {editTask && (
+                                <button
+                                    type="button"
+                                    onClick={onCancel}
+                                    className="px-6 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    {editTask ? 'Update Task' : 'Create Task'}
-                                </Button>
-                            </Box>
-                        </Stack>
-                    </form>
-                </Box>
-            </Paper>
-        </Box>
+                                    Cancel
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors shadow-sm"
+                            >
+                                {editTask ? 'Update Task' : 'Create Task'}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 };
 

@@ -20,18 +20,74 @@ const AppContent = () => {
 
   if (loading) {
     return (
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        bgcolor: 'grey.50'
-      }}>
-        <CircularProgress size={60} thickness={4} />
-        <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          bgcolor: "transparent", // transparent background
+        }}
+      >
+        {/* Moving dots loader */}
+        <Box
+          sx={{
+            position: "relative",
+            height: "12px",
+            width: "200px", // 🔹 wider container for longer movement
+            overflow: "hidden",
+            display: "flex",
+            justifyContent: "flex-start",
+            alignItems: "center",
+          }}
+        >
+          <Box
+            sx={{
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              bgcolor: "primary.main",
+              animation: "moveDots 1.8s infinite linear",
+            }}
+          />
+          <Box
+            sx={{
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              bgcolor: "primary.main",
+              animation: "moveDots 1.8s infinite linear",
+              animationDelay: "0.3s",
+            }}
+          />
+          <Box
+            sx={{
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              bgcolor: "primary.main",
+              animation: "moveDots 1.8s infinite linear",
+              animationDelay: "0.6s",
+            }}
+          />
+        </Box>
+
+        <Typography variant="h6" sx={{ mt: 3, color: "text.secondary" }}>
           Loading application...
         </Typography>
+
+        {/* keyframes */}
+        <style>
+          {`
+          @keyframes moveDots {
+            0%   { transform: translateX(-50px); opacity: 0; }
+            20%  { opacity: 1; }
+            80%  { opacity: 1; }
+            100% { transform: translateX(200px); opacity: 0; }
+          }
+        `}
+        </style>
       </Box>
     );
   }
