@@ -5,11 +5,10 @@ import {
   TextField, MenuItem, Paper, Chip, AppBar, Toolbar, Button, Avatar
 } from '@mui/material';
 
-import { Dashboard, FilterList, Logout, Person, CalendarToday } from '@mui/icons-material'; // Added CalendarToday
+import { Dashboard, FilterList, Logout, Person, CalendarToday } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import TaskForm from '../components/TaskForm';
 import TaskTable from '../components/TaskTable';
-import TaskFilter from '../components/TaskFilter';
 
 import {
   getTasks,
