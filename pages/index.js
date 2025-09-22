@@ -1,7 +1,8 @@
 // pages/Home.js - Updated to match TaskForm's elaborate UI style
 import { useState, useEffect } from 'react';
+import Image from "next/image";
 import {
-  Container, Typography, Alert, CircularProgress, Box,
+  Container, Typography, Alert, CircularProgress, Box, Badge,
   TextField, MenuItem, Paper, Chip, AppBar, Toolbar, Button, Avatar
 } from '@mui/material';
 
@@ -447,7 +448,7 @@ export default function Home() {
         pointerEvents: 'none'
       }
     }}>
-      {/* App Bar with Gradient and Enhanced Styling */}
+      {/* Professional App Bar */}
       <AppBar
         position="static"
         elevation={0}
@@ -457,139 +458,256 @@ export default function Home() {
           backdropFilter: 'blur(10px)'
         }}
       >
-        <Toolbar sx={{ py: 1 }}>
-          <Avatar sx={{
-            bgcolor: 'rgba(255, 255, 255, 0.2)',
-            width: 40,
-            height: 40,
-            mr: 2,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-          }}>
-            <Dashboard sx={{ color: 'white' }} />
-          </Avatar>
-          <Typography variant="h5" component="div" sx={{
-            flexGrow: 1,
-            fontWeight: 700,
-            textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-            background: 'linear-gradient(45deg, #ffffff 30%, rgba(255, 255, 255, 0.8) 90%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}>
-            Daily Task Tracker
-          </Typography>
-
-          {/* Enhanced User Info */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar sx={{
-                width: 36,
-                height: 36,
-                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-                boxShadow: '0 4px 12px rgba(238, 90, 36, 0.3)',
-                fontWeight: 600
-              }}>
-                {userProfile?.name?.charAt(0)?.toUpperCase()}
-              </Avatar>
-              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-                <Typography variant="subtitle2" sx={{
-                  color: 'white',
-                  lineHeight: 1,
-                  fontWeight: 600,
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
-                }}>
-                  {userProfile?.name}
-                </Typography>
-                <Typography variant="caption" sx={{
-                  color: 'rgba(255,255,255,0.9)',
-                  lineHeight: 1,
-                  fontWeight: 500
-                }}>
-                  {getRoleDisplayName(userProfile?.role)} • {userProfile?.empId}
-                </Typography>
+        <Toolbar sx={{ py: 1.5, px: { xs: 2, md: 3 } }}>
+          {/* Left Section - Logo and Title */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <Avatar sx={{
+              bgcolor: 'rgba(255, 255, 255, 0.2)',
+              width: 40,
+              height: 40,
+              mr: 2,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+            }}>
+              <Dashboard sx={{ color: 'white' }} />
+            </Avatar>
+            <Typography
+              variant="h4"
+              component="div"
+              sx={{
+                fontWeight: 700,
+                fontFamily: "'Times New Roman', serif",
+                display: "flex",
+                alignItems: "center",
+                color: "#333", // dark gray for "MPOnline"
+                letterSpacing: "0.5px",
+                position: "relative",
+              }}
+            >
+              <Box
+                component="span"
+                sx={{
+                  color: "#000", // dark black for "MP"
+                  mr: 0.5,
+                }}
+              >
+                MP
               </Box>
-            </Box>
+              <Box
+                component="span"
+                sx={{
+                  color: "#000",
+                  position: "relative",
+                }}
+              >
+                Online
+                {/* Orange Circle */}
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: "-30px",
+                    left: "30%",
+                    width: "25px",
+                    height: "25px",
+                    backgroundColor: "#f7931e", // orange
+                    borderRadius: "50%",
+                    zIndex: 1,
+                  }}
+                />
+                {/* Red Arc */}
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: "-45px",
+                    left: "10%",
+                    width: "120px",
+                    height: "60px",
+                    borderTop: "6px solid #e53935", // red arc
+                    borderRadius: "50%/100%",
+                    transform: "rotate(-5deg)",
+                    zIndex: 0,
+                  }}
+                />
+              </Box>
+            </Typography>
 
-            <Chip
-              label={getRoleDisplayName(userProfile?.role)}
-              color={getRoleColor(userProfile?.role)}
-              size="small"
-              sx={{
-                fontWeight: 600,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            />
-            <Chip
-              label={`${filteredTasks.length} Tasks`}
-              sx={{
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-                color: 'white',
-                boxShadow: '0 2px 8px rgba(238, 90, 36, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-              size="small"
-            />
-            {getActiveFilterCount() > 0 && (
-              <Chip
-                label={`${getActiveFilterCount()} Filters`}
+            <Typography variant="h6" component="div" sx={{
+              fontWeight: 700,
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+              background: 'linear-gradient(45deg, #ffffff 30%, rgba(255, 255, 255, 0.8) 90%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              display: { xs: 'block', sm: 'none' }
+            }}>
+              DTT
+            </Typography>
+          </Box>
+          {/* Right Section - User Info and Actions */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 1, sm: 2 },
+            ml: 'auto',
+            flexShrink: 0
+          }}>
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                color="inherit"
+                startIcon={<CalendarToday sx={{ fontSize: '18px' }} />}
+                onClick={() => setWeeklyReportOpen(true)}
                 sx={{
                   fontWeight: 600,
-                  background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                  color: 'white',
-                  boxShadow: '0 2px 8px rgba(58, 123, 213, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                  borderRadius: 2,
+                  px: { xs: 1.5, sm: 2 },
+                  minWidth: 'auto',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                  },
+                  transition: 'all 0.2s ease',
+                  '& .MuiButton-startIcon': {
+                    marginRight: { xs: 0, sm: '8px' }
+                  }
                 }}
-                size="small"
-              />
-            )}
-            <Button
-              color="inherit"
-              startIcon={<CalendarToday />}
-              onClick={() => setWeeklyReportOpen(true)}
-              sx={{
-                ml: 1,
-                fontWeight: 600,
-                borderRadius: 2,
-                px: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-                },
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Weekly Report
-            </Button>
-            <Button
-              color="inherit"
-              startIcon={<Logout />}
-              onClick={handleLogout}
-              sx={{
-                ml: 1,
-                fontWeight: 600,
-                borderRadius: 2,
-                px: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-                },
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Logout
-            </Button>
+              >
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Weekly Report
+                </Box>
+              </Button>
+
+              <Button
+                color="inherit"
+                startIcon={<Logout sx={{ fontSize: '18px' }} />}
+                onClick={handleLogout}
+                sx={{
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  px: { xs: 1.5, sm: 2 },
+                  minWidth: 'auto',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                  },
+                  transition: 'all 0.2s ease',
+                  '& .MuiButton-startIcon': {
+                    marginRight: { xs: 0, sm: '8px' }
+                  }
+                }}
+              >
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Logout
+                </Box>
+              </Button>
+            </Box>
+
+            {/* Divider */}
+            {/* <Box sx={{
+              width: '1px',
+              height: '32px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              mx: 1,
+              display: { xs: 'none', sm: 'block' }
+            }} /> */}
+
+            {/* User Profile Section */}
+            {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Avatar sx={{
+                  width: 36,
+                  height: 36,
+                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                  boxShadow: '0 4px 12px rgba(238, 90, 36, 0.3)',
+                  fontWeight: 600,
+                  fontSize: '0.875rem'
+                }}>
+                  {userProfile?.name?.charAt(0)?.toUpperCase()}
+                </Avatar>
+
+                <Box sx={{
+                  display: { xs: 'none', lg: 'block' },
+                  textAlign: 'left',
+                  minWidth: 0
+                }}>
+                  <Typography variant="subtitle2" sx={{
+                    color: 'white',
+                    lineHeight: 1.2,
+                    fontWeight: 600,
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '120px'
+                  }}>
+                    {userProfile?.name}
+                  </Typography>
+                  <Typography variant="caption" sx={{
+                    color: 'rgba(255,255,255,0.9)',
+                    lineHeight: 1.2,
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {getRoleDisplayName(userProfile?.role)} • {userProfile?.empId}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box> */}
           </Box>
         </Toolbar>
+
+        {/* Mobile Status Bar - Shows on small screens */}
+        <Box sx={{
+          display: { xs: 'flex', md: 'none' },
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 1,
+          pb: 1.5,
+          px: 2
+        }}>
+          <Chip
+            label={`${filteredTasks.length} Tasks`}
+            sx={{
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+              color: 'white',
+              boxShadow: '0 2px 8px rgba(238, 90, 36, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+            size="small"
+          />
+          {getActiveFilterCount() > 0 && (
+            <Chip
+              label={`${getActiveFilterCount()} Filters`}
+              sx={{
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
+                color: 'white',
+                boxShadow: '0 2px 8px rgba(58, 123, 213, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}
+              size="small"
+            />
+          )}
+          <Chip
+            label={getRoleDisplayName(userProfile?.role)}
+            color={getRoleColor(userProfile?.role)}
+            size="small"
+            sx={{
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          />
+        </Box>
       </AppBar>
 
       <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
@@ -611,18 +729,16 @@ export default function Home() {
           </Alert>
         )}
 
-        {/* Enhanced User Info Card */}
+        {/* Compact User Info Card */}
         <Paper
-          elevation={20}
+          elevation={3}
           sx={{
-            p: 3,
+            p: 2.5,
             mb: 3,
-            borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden',
+            borderRadius: 3,
+            background: '#ffffff',
+            border: '1px solid #e0e7ff',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
             position: 'relative',
             '&::before': {
               content: '""',
@@ -630,55 +746,142 @@ export default function Home() {
               top: 0,
               left: 0,
               right: 0,
-              height: 4,
-              background: 'linear-gradient(90deg, #1976d2 0%, #ff6b6b 50%, #00d2ff 100%)'
+              height: 3,
+              background: '#1976d2',
+              borderRadius: '12px 12px 0 0'
             }
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            flexWrap: { xs: 'wrap', sm: 'nowrap' }
+          }}>
+            {/* Left Section - User Info */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, flex: 1 }}>
               <Avatar sx={{
                 bgcolor: '#1976d2',
-                width: 48,
-                height: 48,
-                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                boxShadow: '0 8px 16px rgba(25, 118, 210, 0.3)'
+                width: 44,
+                height: 44,
+                fontSize: '1.1rem',
+                fontWeight: 600
               }}>
-                <Person sx={{ fontSize: 24 }} />
+                <Person sx={{ fontSize: 20 }} />
               </Avatar>
-              <Box>
+
+              <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography variant="h6" sx={{
-                  color: '#1976d2',
+                  color: '#1a202c',
                   fontWeight: 600,
-                  background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
+                  fontSize: '1.1rem',
+                  lineHeight: 1.3,
+                  mb: 0.5
                 }}>
-                  Welcome, {userProfile?.name} {/* Changed from empName to name */}
+                  {userProfile?.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {userProfile?.role === 'tech-lead'
-                    ? `Managing ${userProfile?.managedTeams?.length} teams: ${userProfile?.managedTeams?.join(', ')}`
-                    : `${getRoleDisplayName(userProfile?.role)} • ${userProfile?.teamName}`
-                  }
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="body2" sx={{
+                    color: '#64748b',
+                    fontWeight: 500,
+                    fontSize: '0.875rem'
+                  }}>
+                    {userProfile?.role === 'tech-lead'
+                      ? `Tech Lead • Managing ${userProfile?.managedTeams?.length} teams`
+                      : `${getRoleDisplayName(userProfile?.role)}`
+                    }
+                  </Typography>
+
+                  {userProfile?.teamName && userProfile?.role !== 'tech-lead' && (
+                    <>
+                      <Box sx={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: '50%',
+                        backgroundColor: '#cbd5e1'
+                      }} />
+                      <Typography variant="body2" sx={{
+                        color: '#64748b',
+                        fontWeight: 500,
+                        fontSize: '0.875rem'
+                      }}>
+                        {userProfile?.teamName}
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Right Section - Employee ID and Status */}
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              flexShrink: 0
+            }}>
+              {/* Employee ID */}
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 2,
+                py: 0.75,
+                borderRadius: 2,
+                backgroundColor: '#FFB74D',
+                border: '1px solid #e2e8f0'
+              }}>
+                <Badge sx={{ fontSize: 16, color: '#64768b' }} />
+                <Typography variant="body2" sx={{
+                  color: '#475569',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.5px'
+                }}>
+                  {userProfile?.empId}
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-              <Chip
-                label={`Employee ID: ${userProfile?.empId}`}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderColor: '#1976d2',
-                  color: '#1976d2',
-                  fontWeight: 500,
-                  boxShadow: '0 2px 8px rgba(25, 118, 210, 0.15)'
-                }}
-              />
-            </Box>
           </Box>
+
+          {/* Team Management Section for Tech Leads */}
+          {userProfile?.role === 'tech-lead' && userProfile?.managedTeams?.length > 0 && (
+            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #f1f5f9' }}>
+              <Typography variant="caption" sx={{
+                color: '#64748b',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                fontSize: '0.7rem',
+                mb: 1,
+                display: 'block'
+              }}>
+                Managing Teams
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {userProfile?.managedTeams?.map((team, index) => (
+                  <Chip
+                    key={index}
+                    label={team}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      fontSize: '0.75rem',
+                      height: 24,
+                      borderColor: '#d1d5db',
+                      color: '#374151',
+                      backgroundColor: '#ffffff',
+                      '&:hover': {
+                        backgroundColor: '#f9fafb'
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
         </Paper>
 
         {/* Task Form */}
