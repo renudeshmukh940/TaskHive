@@ -73,9 +73,9 @@ const AppContent = () => {
           />
         </Box>
 
-        <Typography variant="h6" sx={{ mt: 3, color: "text.secondary" }}>
+        {/* <Typography variant="h6" sx={{ mt: 3, color: "text.secondary" }}>
           Loading application...
-        </Typography>
+        </Typography> */}
 
         {/* keyframes */}
         <style>

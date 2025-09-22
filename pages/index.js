@@ -23,7 +23,7 @@ import {
 
 import WeeklyReport from '../components/WeeklyReport';
 import { format, startOfToday, addDays, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
-import AdminDashboard from '../components/adminDashboard';
+import AdminDashboard from '../components/adminDashboard.js';
 
 export default function Home() {
   const { userProfile, logout } = useAuth();

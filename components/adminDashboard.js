@@ -171,10 +171,10 @@ const AdminDashboard = ({ userProfile }) => {
     const insights = calculateInsights();
 
     const StatCard = ({ title, value, change, changeType, icon: Icon, color, subtitle }) => (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl hover:bg-white/95 transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl bg-${color}-50 flex items-center justify-center`}>
-                    <Icon className={`w-6 h-6 text-${color}-600`} />
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-r from-${color}-500 to-${color}-600 flex items-center justify-center shadow-lg`}>
+                    <Icon className="w-6 h-6 text-white" />
                 </div>
                 {change && (
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${changeType === 'positive'
@@ -197,12 +197,12 @@ const AdminDashboard = ({ userProfile }) => {
 
     const TeamCard = ({ team }) => (
         <div
-            className="bg-white rounded-xl p-5 border border-gray-100 hover:shadow-md transition-all cursor-pointer group"
+            className="bg-white/90 backdrop-blur-sm rounded-xl p-5 border border-white/20 hover:shadow-xl hover:bg-white/95 transition-all cursor-pointer group transform hover:scale-105 duration-300"
             onClick={() => setSelectedTeam(team.name)}
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                         <Building2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -263,7 +263,7 @@ const AdminDashboard = ({ userProfile }) => {
         })).sort((a, b) => b.tasks - a.tasks).slice(0, 8);
 
         return (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <Activity className="w-5 h-5 mr-2 text-blue-600" />
                     Team Activity ({currentDateLabel})
@@ -280,7 +280,6 @@ const AdminDashboard = ({ userProfile }) => {
                                 props.dataKey === 'tasks' ? 'Tasks' : 'Hours'
                             ]}
                         />
-
                         <Legend />
                         <Bar yAxisId="left" dataKey="tasks" fill="#3B82F6" name="Tasks" radius={4} />
                         <Bar yAxisId="right" dataKey="hours" fill="#10B981" name="Hours" radius={4} />
@@ -303,7 +302,7 @@ const AdminDashboard = ({ userProfile }) => {
             .slice(0, 8);
 
         return (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <Timer className="w-5 h-5 mr-2 text-purple-600" />
                     Project Time Distribution ({currentDateLabel})
@@ -337,18 +336,18 @@ const AdminDashboard = ({ userProfile }) => {
     };
 
     const TopPerformersTable = ({ performers }) => (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Award className="w-5 h-5 mr-2 text-yellow-600" />
                 Top Performers ({currentDateLabel})
             </h3>
             <div className="space-y-3">
                 {performers?.slice(0, 5).map((performer, index) => (
-                    <div key={performer.empId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={performer.empId} className="flex items-center justify-between p-3 bg-gray-50/90 rounded-lg backdrop-blur-sm">
                         <div className="flex items-center space-x-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${index === 0 ? 'bg-yellow-500' :
-                                index === 1 ? 'bg-gray-400' :
-                                    index === 2 ? 'bg-orange-400' : 'bg-blue-500'
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+                                index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-400' :
+                                    index === 2 ? 'bg-gradient-to-r from-orange-300 to-orange-400' : 'bg-gradient-to-r from-blue-400 to-blue-500'
                                 }`}>
                                 {index + 1}
                             </div>
@@ -369,30 +368,100 @@ const AdminDashboard = ({ userProfile }) => {
         </div>
     );
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    // Enhanced Loading Screen Component - Transparent overlay with dashboard visible
+    const LoadingScreen = () => (
+        <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center">
+            <div className="relative bg-white/95 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/30 max-w-md w-full mx-4 transform scale-100 animate-pulse">
+                {/* Animated Logo */}
+                <div className="w-20 h-20 mx-auto mb-6 relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-2xl animate-spin-slow"></div>
+                    <div className="absolute inset-2 bg-white rounded-xl flex items-center justify-center">
+                        <Zap className="w-8 h-8 text-blue-600 animate-bounce" />
+                    </div>
+                </div>
+
+                {/* Animated Data Particles */}
+                <div className="flex justify-center space-x-1 mb-6">
+                    {[...Array(7)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="w-1.5 h-8 bg-gradient-to-b from-blue-400 via-purple-400 to-indigo-500 rounded-full animate-bounce"
+                            style={{
+                                animationDelay: `${i * 0.1}s`,
+                                animationDuration: '1.2s'
+                            }}
+                        />
+                    ))}
+                </div>
+
+                {/* Loading Text */}
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading MpOnline Dashboard...</p>
-                    <p className="text-sm text-gray-500 mt-1">Loading data for {currentDateLabel}</p>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center justify-center space-x-2">
+                        <TrendingUp className="w-5 h-5 text-green-500 animate-pulse" />
+                        <span>Loading MpOnline Dashboard</span>
+                    </h3>
+                    <p className="text-gray-600 mb-1">Analyzing {stats?.totalTeams || 'teams'} teams & {stats?.totalEmployees || 'employees'} members</p>
+                    <p className="text-sm text-blue-600 mb-6">Processing data for {currentDateLabel}</p>
+
+                    {/* Animated Progress Bar */}
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden relative">
+                        <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-full animate-pulse w-3/4 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-white/20 animate-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Floating Analytics Icons */}
+                <div className="absolute -top-4 -right-4 w-12 h-12 bg-green-400/20 rounded-full flex items-center justify-center animate-float">
+                    <Users className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="absolute -bottom-4 -left-4 w-10 h-10 bg-purple-400/20 rounded-full flex items-center justify-center animate-float" style={{ animationDelay: '0.5s' }}>
+                    <Briefcase className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="absolute top-1/2 -left-6 w-8 h-8 bg-blue-400/20 rounded-full flex items-center justify-center animate-float" style={{ animationDelay: '1s' }}>
+                    <Activity className="w-4 h-4 text-blue-600" />
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+
+    // Add CSS for custom animations
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin-slow {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            @keyframes shimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+            .animate-spin-slow { animation: spin-slow 2s linear infinite; }
+            .animate-shimmer { animation: shimmer 1.5s infinite; }
+            .animate-float { animation: float 3s ease-in-out infinite; }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
                 <div className="text-center max-w-md">
-                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4 animate-pulse" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button
                         onClick={loadDashboardData}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105"
                     >
-                        Retry
+                        <TrendingUp className="w-4 h-4 inline mr-2" />
+                        Retry Loading
                     </button>
                 </div>
             </div>
@@ -400,13 +469,12 @@ const AdminDashboard = ({ userProfile }) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex">
             {/* Sidebar */}
-            <div className={`bg-white shadow-lg transition-all duration-300 fixed h-full z-40 ${sidebarCollapsed ? 'w-16' : 'w-64'
-                }`}>
+            <div className={`bg-white/95 backdrop-blur-sm shadow-xl transition-all duration-300 fixed h-full z-40 border-r border-white/20 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
                 <div className="p-4">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                             <Zap className="w-6 h-6 text-white" />
                         </div>
                         {!sidebarCollapsed && (
@@ -423,9 +491,9 @@ const AdminDashboard = ({ userProfile }) => {
                         <button
                             key={item.id}
                             onClick={() => setActiveView(item.id)}
-                            className={`w-full flex items-center px-6 py-3 text-left hover:bg-blue-50 transition-colors ${activeView === item.id
-                                ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                                : 'text-gray-600'
+                            className={`w-full flex items-center px-6 py-3 text-left hover:bg-blue-50/80 transition-all duration-200 ${activeView === item.id
+                                ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-600 border-r-2 border-blue-600'
+                                : 'text-gray-600 hover:text-blue-600'
                                 }`}
                         >
                             <item.icon className="w-5 h-5" />
@@ -436,19 +504,19 @@ const AdminDashboard = ({ userProfile }) => {
             </div>
 
             {/* Main Content */}
-            <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+            <div className={`transition-all duration-300 flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
                 {/* Header */}
-                <header className="bg-white shadow-sm border-b border-gray-200">
-                    <div className="flex items-center justify-between px-8 py-6">
+                <header className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-white/20 sticky top-0 z-30">
+                    <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-6">
                         <div className="flex items-center space-x-4">
                             <button
                                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                className="text-gray-500 hover:text-gray-700"
+                                className="text-gray-500 hover:text-gray-700 transition-colors p-2 rounded-lg hover:bg-gray-100"
                             >
                                 <Menu className="w-6 h-6" />
                             </button>
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">Admin Dashboard</h1>
                                 <p className="text-gray-500 flex items-center space-x-2">
                                     <CalendarDays className="w-4 h-4" />
                                     <span>{currentDate}</span>
@@ -462,7 +530,7 @@ const AdminDashboard = ({ userProfile }) => {
                                 <select
                                     value={dateRange}
                                     onChange={(e) => setDateRange(e.target.value)}
-                                    className="px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none"
+                                    className="px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/90 backdrop-blur-sm appearance-none hover:bg-white transition-all"
                                 >
                                     {dateRanges.map(range => (
                                         <option key={range.value} value={range.value}>
@@ -479,7 +547,7 @@ const AdminDashboard = ({ userProfile }) => {
 
                             <button
                                 onClick={exportToExcel}
-                                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 shadow-lg"
                             >
                                 <Download className="w-4 h-4 mr-2" />
                                 Export ({dateRange})
@@ -487,7 +555,7 @@ const AdminDashboard = ({ userProfile }) => {
 
                             {/* User Profile with Logout */}
                             <div className="flex items-center space-x-2">
-                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
                                     <span className="text-white text-sm font-medium">
                                         {userProfile?.empName?.charAt(0).toUpperCase() || 'A'}
                                     </span>
@@ -495,7 +563,7 @@ const AdminDashboard = ({ userProfile }) => {
                                 <span className="text-gray-700 font-medium hidden md:block">{userProfile?.empName || 'Admin'}</span>
                                 <button
                                     onClick={logout}
-                                    className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium ml-2"
+                                    className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all transform hover:scale-105 text-sm font-medium ml-2"
                                     title="Logout"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -508,9 +576,9 @@ const AdminDashboard = ({ userProfile }) => {
                 </header>
 
                 {/* Dashboard Content */}
-                <main className="p-8">
+                <main className="p-4 sm:p-6 lg:p-8 w-full">
                     {/* Date Range Info Banner */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 mb-6">
+                    <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 backdrop-blur-sm border border-blue-100 rounded-xl p-4 mb-6 shadow-lg w-full">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -527,8 +595,8 @@ const AdminDashboard = ({ userProfile }) => {
                         </div>
                     </div>
 
-                    {/* Key Metrics */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {/* Key Metrics - Full width responsive */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 w-full">
                         <StatCard
                             title={`Total Tasks (${currentDateLabel})`}
                             value={stats?.totalTasks || 0}
@@ -567,27 +635,27 @@ const AdminDashboard = ({ userProfile }) => {
                         />
                     </div>
 
-                    {/* Task Status Overview */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Task Status Overview - Full width responsive */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 w-full">
                         <div className="lg:col-span-2">
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                                     Task Status Overview ({currentDateLabel})
                                 </h2>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="text-center p-4 bg-green-50 rounded-xl">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="text-center p-4 bg-green-50/90 rounded-xl backdrop-blur-sm">
                                         <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
                                         <h3 className="text-2xl font-bold text-green-600">{stats?.projectStatus.completed || 0}</h3>
                                         <p className="text-sm text-green-600">Completed Tasks</p>
                                         <p className="text-xs text-gray-500 mt-1">{insights.completionRate}% of total</p>
                                     </div>
-                                    <div className="text-center p-4 bg-blue-50 rounded-xl">
+                                    <div className="text-center p-4 bg-blue-50/90 rounded-xl backdrop-blur-sm">
                                         <Clock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                                         <h3 className="text-2xl font-bold text-blue-600">{stats?.projectStatus.inProgress || 0}</h3>
                                         <p className="text-sm text-blue-600">In Progress Tasks</p>
                                         <p className="text-xs text-gray-500 mt-1">{insights.progressRate}% of total</p>
                                     </div>
-                                    <div className="text-center p-4 bg-orange-50 rounded-xl">
+                                    <div className="text-center p-4 bg-orange-50/90 rounded-xl backdrop-blur-sm">
                                         <AlertCircle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
                                         <h3 className="text-2xl font-bold text-orange-600">{stats?.projectStatus.onHold || 0}</h3>
                                         <p className="text-sm text-orange-600">On Hold Tasks</p>
@@ -597,8 +665,8 @@ const AdminDashboard = ({ userProfile }) => {
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div className="space-y-4 lg:space-y-6">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Productivity</h3>
                                 <p className="text-3xl font-bold text-blue-600">{insights.totalHoursPeriod}h</p>
                                 <p className="text-sm text-gray-500">
@@ -608,7 +676,7 @@ const AdminDashboard = ({ userProfile }) => {
                                     }
                                 </p>
                             </div>
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Avg Tasks/Employee</h3>
                                 <p className="text-3xl font-bold text-green-600">{insights.avgTasksPerEmployee}</p>
                                 <p className="text-sm text-gray-500">
@@ -621,15 +689,15 @@ const AdminDashboard = ({ userProfile }) => {
                         </div>
                     </div>
 
-                    {/* Team Filter */}
-                    <div className="mb-6">
+                    {/* Team Filter - Full width */}
+                    <div className="mb-6 w-full">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Filter by Team ({currentDateLabel})
                         </label>
                         <select
                             value={selectedTeam}
                             onChange={(e) => setSelectedTeam(e.target.value)}
-                            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/90 backdrop-blur-sm"
                         >
                             <option value="all">All Teams</option>
                             {stats?.teamBreakdown?.map(team => (
@@ -640,27 +708,27 @@ const AdminDashboard = ({ userProfile }) => {
                         </select>
                     </div>
 
-                    {/* Team Overview or Detailed View */}
+                    {/* Team Overview or Detailed View - Full width responsive */}
                     {selectedTeam === 'all' ? (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 w-full">
                                 {stats?.teamBreakdown?.map((team) => (
                                     <TeamCard key={team.name} team={team} />
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
                                 <ActivityChart />
                                 <ProjectTimeChart />
                             </div>
                         </>
                     ) : teamInsights ? (
-                        <div className="space-y-6">
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div className="space-y-6 w-full">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                                     Team: {teamInsights.teamName} ({currentDateLabel})
                                 </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                     <div className="text-center">
                                         <h3 className="text-2xl font-bold text-blue-600">{teamInsights.employeeCount}</h3>
                                         <p className="text-gray-500">Team Members</p>
@@ -680,21 +748,21 @@ const AdminDashboard = ({ userProfile }) => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
                                 <TopPerformersTable performers={teamInsights.topPerformers} />
 
                                 {Object.keys(teamInsights.timeByProject).length > 0 && (
-                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                                         <h3 className="text-lg font-semibold text-gray-900 mb-4">
                                             Project Time Distribution ({currentDateLabel})
                                         </h3>
-                                        <div className="space-y-3">
+                                        <div className="space-y-3 max-h-96 overflow-y-auto">
                                             {Object.entries(teamInsights.timeByProject)
                                                 .sort(([, a], [, b]) => b - a)
                                                 .slice(0, 6)
                                                 .map(([project, hours]) => (
-                                                    <div key={project} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                                        <span className="font-medium text-gray-900 truncate">
+                                                    <div key={project} className="flex justify-between items-center p-3 bg-gray-50/90 rounded-lg backdrop-blur-sm hover:bg-gray-100 transition-colors">
+                                                        <span className="font-medium text-gray-900 truncate max-w-[70%]">
                                                             {project.split('-')[0].substring(0, 20)}...
                                                         </span>
                                                         <span className="text-blue-600 font-semibold">
@@ -708,12 +776,15 @@ const AdminDashboard = ({ userProfile }) => {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-2xl p-12 shadow-sm border border-gray-100 text-center">
-                            <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-12 shadow-lg border border-white/20 text-center w-full">
+                            <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4 animate-pulse" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Team</h3>
                             <p className="text-gray-500">Choose a team from the dropdown to view detailed insights for {currentDateLabel}</p>
                         </div>
                     )}
+
+                    {/* Loading overlay for data updates */}
+                    {loading && <LoadingScreen />}
                 </main>
             </div>
         </div>
