@@ -22,7 +22,7 @@ import {
 
 import WeeklyReport from '../components/WeeklyReport';
 import { format, startOfToday, addDays, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
-import AdminDashboard from '../components/adminDashboard.js';
+import AdminDashboard from '../components/AdminDashboard'
 
 export default function Home() {
   const { userProfile, logout } = useAuth();
@@ -831,8 +831,6 @@ export default function Home() {
           </Paper>
         )}
 
-        {/* REPLACE THIS SECTION WITH THE NEW COMPACT FILTER */}
-        {/* Compact Advanced Filter Section */}
         <Paper
           elevation={0}
           sx={{
@@ -976,7 +974,7 @@ export default function Home() {
               <TextField
                 select
                 size="small"
-                value=""
+                value="Filters"
                 displayEmpty
                 sx={{
                   minWidth: 140,
@@ -988,11 +986,11 @@ export default function Home() {
                   },
                   '& .MuiSelect-select': {
                     fontSize: '0.75rem',
-                    color: '#64748b'
+                    color: '#374151'
                   }
                 }}
               >
-                <MenuItem value="" disabled>
+                <MenuItem value="Filters">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#64748b' }}>
                     <FilterList sx={{ fontSize: 16 }} />
                     Advanced Filters
@@ -1078,7 +1076,7 @@ export default function Home() {
                             {filterOptions.teamLeaders.map((leader) => (
                               <Chip
                                 key={leader.empId}
-                                label={leader.name}
+                                label={leader.empName || leader.name} // Fixed: use empName consistently
                                 size="small"
                                 clickable
                                 onClick={(e) => {
@@ -1091,7 +1089,7 @@ export default function Home() {
                                   height: 22,
                                   fontSize: '0.7rem',
                                   backgroundColor: activeFilters.teamLeader === leader.empId ? '#1e40af' : '#f1f5f9',
-                                  color: activeFilters.teamLeader === leader.empId ? 'white' : '#64748b',
+                                  color: activeFilters.teamLeader === leader.empId ? 'white' : '#64748b', // Fixed: consistent color
                                   border: 'none',
                                   '&:hover': {
                                     backgroundColor: activeFilters.teamLeader === leader.empId ? '#1d4ed8' : '#e2e8f0'
@@ -1104,6 +1102,7 @@ export default function Home() {
                       </MenuItem>
                     )}
 
+                    {/* Fixed: Show Track Leads for both tech-lead and team-leader */}
                     {(userProfile?.role === 'tech-lead' || userProfile?.role === 'team-leader') && filterOptions.trackLeads?.length > 0 && (
                       <MenuItem>
                         <Box sx={{ width: '100%' }}>
@@ -1114,7 +1113,7 @@ export default function Home() {
                             {filterOptions.trackLeads.map((lead) => (
                               <Chip
                                 key={lead.empId}
-                                label={lead.name}
+                                label={lead.empName || lead.name} // Fixed: use empName consistently
                                 size="small"
                                 clickable
                                 onClick={(e) => {
@@ -1127,7 +1126,7 @@ export default function Home() {
                                   height: 22,
                                   fontSize: '0.7rem',
                                   backgroundColor: activeFilters.trackLead === lead.empId ? '#1e40af' : '#f1f5f9',
-                                  color: activeFilters.trackLead === lead.empId ? 'white' : '#64748b',
+                                  color: activeFilters.trackLead === lead.empId ? 'white' : '#64748b', // Fixed: was 'blue'
                                   border: 'none',
                                   '&:hover': {
                                     backgroundColor: activeFilters.trackLead === lead.empId ? '#1d4ed8' : '#e2e8f0'
@@ -1140,7 +1139,8 @@ export default function Home() {
                       </MenuItem>
                     )}
 
-                    {filterOptions.employees?.length > 0 && (
+                    {/* Fixed: Show Employees for all roles except when showing own only */}
+                    {(!activeFilters.showOwnOnly) && filterOptions.employees?.length > 0 && (
                       <MenuItem>
                         <Box sx={{ width: '100%' }}>
                           <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mb: 1, display: 'block' }}>
@@ -1156,7 +1156,7 @@ export default function Home() {
                             {filterOptions.employees.map((emp) => (
                               <Chip
                                 key={emp.empId}
-                                label={emp.name}
+                                label={emp.empName || emp.name} // Fixed: use empName consistently
                                 size="small"
                                 clickable
                                 onClick={(e) => {

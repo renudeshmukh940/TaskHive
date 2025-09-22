@@ -877,7 +877,7 @@ const TaskFilter = ({
                         )}
 
                         {/* Help text */}
-                        <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                        <Box sx={{ mt: 3, p: 2, bgcolor: 'red.50', borderRadius: 2 }}>
                             <Typography variant="body2" color="textSecondary" fontWeight={500}>
                                 <FilterList sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
                                 {showOwnOnly
