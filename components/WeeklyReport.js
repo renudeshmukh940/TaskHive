@@ -75,8 +75,8 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
+             "Content-Type": "application/json",
+  "x-goog-api-key": process.env.NEXT_PUBLIC_GEMINI_API_KEY,
           },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
