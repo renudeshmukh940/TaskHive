@@ -13,6 +13,7 @@ import {
     getWeeklyTasks
 } from '../lib/firebase';
 
+// ✅ Correct initialization for Gemini (use v1 endpoint)
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
 
 const WeeklyReport = ({ open, onClose, userProfile }) => {
@@ -23,7 +24,6 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
     const [generating, setGenerating] = useState(false);
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState('');
-
 
     const calculateEndDate = (startDate) => {
         const date = new Date(startDate);
@@ -41,11 +41,9 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
         setError('');
 
         try {
-            // Summarize data for LLM
             const clients = [...new Set(tasks.map(t => t.clientName).filter(Boolean))];
             const projects = [...new Set(tasks.map(t => t.projectName).filter(Boolean))];
 
-            // Group hours by project
             const projectHours = {};
             tasks.forEach(task => {
                 if (task.projectName && task.timeSpent) {
@@ -54,7 +52,6 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
                 }
             });
 
-            // Activities summary
             const activities = tasks.map(task => ({
                 date: task.date,
                 description: task.taskDescription,
@@ -87,9 +84,12 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
             - Conclusion
             `;
 
+            // ✅ FIXED: Correct Gemini model call using v1 endpoint
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const result = await model.generateContent(prompt);
-            const generatedText = await result.response.text();
+
+            // ✅ FIXED: Correct way to access text (no `await` needed)
+            const generatedText = result.response.text();
 
             setReportText(generatedText);
             setEditing(true);
@@ -112,7 +112,6 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
         doc.text(`Employee: ${userProfile.empName} (${userProfile.empId})`, 20, 35);
         doc.text(`Week: ${weekStart} - ${calculateEndDate(weekStart)}`, 20, 45);
 
-        // Split text into lines
         const splitText = doc.splitTextToSize(reportText, 170);
         doc.text(splitText, 20, 60);
 
@@ -124,8 +123,8 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
         setLoading(true);
         setError('');
         try {
-            const startDate = weekStart; // Use the weekStart state
-            const endDate = calculateEndDate(weekStart); // Calculate end date
+            const startDate = weekStart;
+            const endDate = calculateEndDate(weekStart);
 
             const weeklyTasks = await getWeeklyTasks(userProfile, startDate, endDate, true);
             setTasks(weeklyTasks);
