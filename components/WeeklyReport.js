@@ -85,7 +85,8 @@ const WeeklyReport = ({ open, onClose, userProfile }) => {
             `;
 
             // ✅ FIXED: Correct Gemini model call using v1 endpoint
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-pro" });
+
             const result = await model.generateContent(prompt);
 
             // ✅ FIXED: Correct way to access text (no `await` needed)
