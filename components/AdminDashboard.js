@@ -119,7 +119,7 @@ const AdminDashboard = ({ userProfile }) => {
                 XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
             });
 
-            XLSX.writeFile(workbook, `MpOnline_Admin_Dashboard_${dateRange}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+            XLSX.writeFile(workbook, `Admin_Dashboard_${dateRange}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
         } catch (error) {
             console.error('Export failed:', error);
         }
@@ -398,7 +398,7 @@ const AdminDashboard = ({ userProfile }) => {
                 <div className="text-center">
                     <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center justify-center space-x-2">
                         <TrendingUp className="w-5 h-5 text-green-500 animate-pulse" />
-                        <span>Loading MpOnline Dashboard</span>
+                        <span>Loading Admin Dashboard</span>
                     </h3>
                     <p className="text-gray-600 mb-1">Analyzing {stats?.totalTeams || 'teams'} teams & {stats?.totalEmployees || 'employees'} members</p>
                     <p className="text-sm text-blue-600 mb-6">Processing data for {currentDateLabel}</p>
@@ -479,11 +479,11 @@ const AdminDashboard = ({ userProfile }) => {
                         </div>
                         {!sidebarCollapsed && (
                             <div>
-                                <h1 className="text-lg font-bold text-gray-900">MpOnline</h1>
+                                <h1 className="text-lg font-bold text-gray-900">TaskHive</h1>
                                 <p className="text-sm text-gray-500">Admin Portal</p>
                             </div>
                         )}
-                    </div>
+                    </div
                 </div>
 
                 <nav className="mt-6">
