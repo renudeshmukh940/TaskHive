@@ -483,7 +483,7 @@ const AdminDashboard = ({ userProfile }) => {
                                 <p className="text-sm text-gray-500">Admin Portal</p>
                             </div>
                         )}
-                    </div
+                    </div>
                 </div>
 
                 <nav className="mt-6">
