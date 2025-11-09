@@ -455,7 +455,7 @@ const AuthPages = () => {
                                         <Settings sx={{ fontSize: 16, color: 'white' }} />
                                     </Box>
                                     <Typography variant="h5" sx={{ fontWeight: 700, color: '#1f2937' }}>
-                                        Mponline
+                                        TaskHive
                                     </Typography>
                                 </Box>
 
@@ -545,7 +545,7 @@ const AuthPages = () => {
                                         </Typography>
                                         <TextField
                                             fullWidth
-                                            placeholder="MpOnline@company.com"
+                                            placeholder="Companyname@gmail.com"
                                             value={loginData.email}
                                             onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
                                             required
@@ -1218,7 +1218,7 @@ const AuthPages = () => {
                             {/* Footer */}
                             <Box sx={{ mt: 'auto', pt: 3 }}>
                                 <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center' }}>
-                                    Copyright © 2025 MpOnline Bhopal
+                                    Copyright © 2025 Renu Deshmukh
                                 </Typography>
                                 <Box sx={{ textAlign: 'center', mt: 1 }}>
                                     <Button
