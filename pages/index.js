@@ -499,7 +499,7 @@ export default function Home() {
                   position: "relative",
                 }}
               >
-                Hive
+                Hlve
                 {/* Orange Circle */}
                 <Box
                   sx={{
