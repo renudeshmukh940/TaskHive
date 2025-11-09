@@ -490,7 +490,7 @@ export default function Home() {
                   mr: 0.5,
                 }}
               >
-                MP
+                Task
               </Box>
               <Box
                 component="span"
@@ -499,7 +499,7 @@ export default function Home() {
                   position: "relative",
                 }}
               >
-                Online
+                Hive
                 {/* Orange Circle */}
                 <Box
                   sx={{
